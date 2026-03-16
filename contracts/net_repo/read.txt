@@ -1,0 +1,85 @@
+Deploy NetCafeUser với _staffContract.
+Deploy NetCafeSession với _staffContract + userContract.
+Deploy NetCafeTopUp với _staffContract + userContract.
+Deploy NetCafeSpend với _staffContract + userContract + sessionContract.
+Deploy NetCafeStation với _staffContract + userContract + sessionContract.
+
+Sau khi deploy xong hết:
+Mở contract NetCafeUser → gọi:
+setModule(address_NetCafeTopUp, true)
+setModule(address_NetCafeSpend, true)
+Mở contract NetCafeSession → gọi:
+setModule(address_NetCafeSpend, true)
+
+
+staff_management:0x23ECBFf20A9eEfDdCA625229BbAaCf2909d333C1
+
+
+//v1
+NetCafeUser:0x8BA2D11346FF442b3ab4DB94e86B80B40c9517bd
+NetCafeSession:0x2872A4adF6bEd6CdfBb3d31bC7619AdB626BC411
+NetCafeTopUp:0xA8a57cBF59633f5DC1A1bBC78A4C99F0aa091811
+NetCafeSpend:0x5CF0313d01257E07Fe1E94a83011505316173F92
+NetCafeStation:0x74F65543DeDD7e0Cfd63E6cC715F448f2318336F
+
+
+//v2 how to deploy 
+Deploy NetCafeUser với _staffContract.
+Deploy NetCafeSession với _staffContract + userContract.
+Deploy NetCafeTopUp với _staffContract + userContract.
+Deploy NetCafeSpend với _staffContract + userContract + sessionContract.
+Deploy NetCafeManagement 
+Deploy NetCafeStation với _staffContract + userContract + sessionContract+managementContract
+
+
+/14/1/2026
+NetCafeUser:0x643AfDD6bFD22584B07E8C4Ee929045564AaBe4D
+NetCafeSession:0x97Dd8b0d7cbDC3632D1E98b8f13E881F36836296
+NetCafeTopUp:0x035726EFAD96009aa0631e432e9aa9a49CA7293e
+NetCafeSpend:0x683185b6DD3C32FF7b4eD6ba78E36DeEf2073167
+NetCafeManagement:0x643AfDD6bFD22584B07E8C4Ee929045564AaBe4D
+NetCafeStation:0x134983D92667493797724De97A51cA835635037d
+
+/15/1/2026
+NetCafeUser:0x643AfDD6bFD22584B07E8C4Ee929045564AaBe4D
+NetCafeSession:0x97Dd8b0d7cbDC3632D1E98b8f13E881F36836296
+NetCafeTopUp:0x035726EFAD96009aa0631e432e9aa9a49CA7293e
+NetCafeSpend:0x683185b6DD3C32FF7b4eD6ba78E36DeEf2073167
+
+/commit 
+NetCafeManagement:0xD1C35431cfCA138782BEEC45BAcDe80851be9fF2
+NetCafeStation:0x720809830B42637dd822Fed08db10a0A4632766e
+
+19/1/2026 (Deploy bản proxy )
+//how to deploy
+_staffContract::0x23ECBFf20A9eEfDdCA625229BbAaCf2909d333C1
+
+-Deploy NetCafeUser với _staffContrac(0x23ECBFf20A9eEfDdCA625229BbAaCf2909d333C1).
+
+-Deploy NetCafeSession với _staffContract (0x23ECBFf20A9eEfDdCA625229BbAaCf2909d333C1)
++ userProxyContract(0xD15ca4444a1617ECDFFE9B78fae5f4629C532eB4).
+
+-Deploy NetCafeTopUp với _staffContrac(0x23ECBFf20A9eEfDdCA625229BbAaCf2909d333C1)t 
++ userProxyContract(0xD15ca4444a1617ECDFFE9B78fae5f4629C532eB4).
+
+-Deploy NetCafeSpend với _staffContract(0x23ECBFf20A9eEfDdCA625229BbAaCf2909d333C1)
+ + userProxyContract(0xD15ca4444a1617ECDFFE9B78fae5f4629C532eB4)
+ + sessionProxyContract(0xf9f33290056713C078586B0135a0B588997b9be3)
+
+-Deploy NetCafeManagement 
+
+-Deploy NetCafeStation với _staffContract(0x23ECBFf20A9eEfDdCA625229BbAaCf2909d333C1)
+ + userProxyContract(0xD15ca4444a1617ECDFFE9B78fae5f4629C532eB4)
+ + sessionProxyContract(0xf9f33290056713C078586B0135a0B588997b9be3)
+ + managementProxyContract(0xcD6eC69A20Eb4CEdCeb135CDc1675F6d8a8Db2E0)
+
+
+//ContractAdress
+NetCafeUser:0xD15ca4444a1617ECDFFE9B78fae5f4629C532eB4
+NetCafeSession:0xf9f33290056713C078586B0135a0B588997b9be3
+NetCafeTopUp:0x56b11f1E4d50f3A62791b4C752Af342abdfF5C52
+NetCafeSpend:0x309fa68C6d88Eb22d24F546772F7De93B765A6A8
+NetCafeManagement:0xcD6eC69A20Eb4CEdCeb135CDc1675F6d8a8Db2E0
+NetCafeStation:0x08AD594DbC0468a1a0Cc40799830Ac20b4E7Af0D
+
+Note: chỉ lấy địa chỉ proxy (ERC1967Proxy) chứ k lấy địa chỉ implementation

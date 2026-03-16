@@ -1,0 +1,30 @@
+{
+  "name": "restaurant-smart-contract_2.10",
+  "version": "1.0.0",
+  "description": "Mananagement: 1.SetTax : set  Restaurant Contracts 1.Management: cần gọi hàm grantRole để phân quyền ai là admin , nhân viên chỉ dành cho admin: -CreateStaff: tạo nhân viên -UpdateStaffInfo: update thông tin nhân viên -CreateTable: tạo bàn -UpdateTable: update thông tin bàn -CreateCategory: tạo loại món -UpdateCategory: update loại món -CreateDish: tạo món ăn -UpdateDish: update thông tin món ăn -CreateDiscount: tạo khuyến mãi -UpdateDiscount: update thông tin khuyến mãi  chỉ dành cho nhân viên -UpdateDishStatus: nhân viên update tình trạng món còn hay hết Các hàm lấy thông tin: nội dung như tên của hàm",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meta-node-blockchain/restaurant-smart-contract.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/meta-node-blockchain/restaurant-smart-contract/issues"
+  },
+  "homepage": "https://github.com/meta-node-blockchain/restaurant-smart-contract#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0"
+  },
+  "devDependencies": {
+    "forge-std": "github:foundry-rs/forge-std"
+  }
+}

@@ -1,0 +1,15 @@
+[profile.default]
+src = "contracts"
+out = "out"
+optimizer = true
+optimizer_runs = 200 # Set the number of optimization runs
+via_ir = true
+# yul = true
+libs = ["lib"]
+ignored_warnings_from = ["lib/forge-std/src/"]
+remappings = [
+   '@openzeppelin/contracts=node_modules/@openzeppelin/contracts',
+   '@openzeppelin/contracts-upgradeable=node_modules/@openzeppelin/contracts-upgradeable',
+   'openzeppelin-contracts-upgradeable/contracts=node_modules/@openzeppelin/contracts-upgradeable'
+]
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
