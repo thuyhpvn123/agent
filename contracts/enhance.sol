@@ -171,6 +171,10 @@ contract EnhancedAgentManagement is AgentManagement {
         emit AgentCreated(_walletAddress, _storeName, block.timestamp);
         return true;
     }
+    function initAgentDB(address _agent) internal {
+        require(publicfullDB != address(0),"PublicFullDB not set");
+        IPublicfullDB(publicfullDB).initAgentDbs(_agent);
+    }
     function getRobotSCByAgentFromFactory(address _agent, uint _branchId) external view returns (RobotContracts memory) {
         RobotContracts memory robotContracts = IRobotFactory(robotFactory).getRobotSCByAgentFromFactory(_agent,_branchId);
         return robotContracts;

@@ -1579,6 +1579,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     function _createTables()public {
         vm.startPrank(agent2);
         management.CreateArea(1,"Khu A");
+        management.CreateTable(2,6,true,"2",1);
         vm.stopPrank();
     }
     function _order(RestaurantLoyaltySystem Points )public {

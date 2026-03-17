@@ -71,7 +71,8 @@ contract AgentManagement is
     // Track super admins created by company admin
     mapping(address => address) public superAdminToCompanyAdmin; // superAdmin => companyAdmin who created them
     mapping(address => address[]) public companyAdminSuperAdmins; // companyAdmin => list of their super admins
-    uint256[46] private __gap;
+    address public publicfullDB;
+    uint256[45] private __gap;
     // Events
     event SuperAdminSet(address indexed admin);
     event AgentCreated(address indexed agent, string storeName, uint256 timestamp);
@@ -156,6 +157,9 @@ contract AgentManagement is
     // ADMIN INITIALIZATION
     // ========================================================================
     
+    function setPublicfullDB(address _publicfullDB) external onlyOwner {
+        publicfullDB = _publicfullDB;
+    }
 
     function setAdmin(address _adminWallet) external onlyOwner {
         require(_adminWallet != address(0), "InvalidWallet");       
