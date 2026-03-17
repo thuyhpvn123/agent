@@ -1199,7 +1199,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         _createStaff(management,staff1Shifts,staff1Roles,staff1);
         _createDishes();
         _createTables();
-        // _order(Points );
+        _order(Points );
         //Meos
         address meosAgentAdd = meosFactory.getAgentMEOSContract(agent2,branchIds2[0]);
         MeosContracts memory meoos = enhanced.getMeosSCByAgentFromFactory(agent2,branchIds2[0]);

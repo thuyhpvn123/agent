@@ -6,7 +6,6 @@ artifacts
 cache
 out
 node_modules
-lib
 .github
 output
 output_report
