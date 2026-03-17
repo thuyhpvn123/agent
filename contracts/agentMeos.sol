@@ -32,6 +32,7 @@ contract AgentMeos is OwnableUpgradeable {
     address public StaffMeosSC;
     address public iqrFactory;
     // address public branchManagement; //proxy
+
     event OrderCreated(uint256 indexed orderId, address indexed customer, uint256 amount, uint256 timestamp);
     event OrderCompleted(uint256 indexed orderId, uint256 timestamp);
     event OrderCancelled(uint256 indexed orderId, uint256 timestamp);
@@ -265,7 +266,7 @@ contract AgentMeos is OwnableUpgradeable {
         address _newImplNetCafeSpend,
         address _newImplNetCafeManagement,
         address _newImplNetCafeStation
-    ) external onlyOwner {
+    ) external  {
         if(_newImplStaffMeos != address(0)){
             require(address(StaffMeosBeacon) != address(0), "Beacon not created yet");
             address oldImplStaffMeos = StaffMeosBeacon.implementation();

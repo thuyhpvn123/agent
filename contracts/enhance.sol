@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AgentManagement} from "./agent.sol";
-import {PaginationResult,License,AgentInfo,Agent, AgentAnalytics, TimeFilter, IIQRFactory, ILoyaltyFactory, IRestaurantLoyaltySystem, IAgentIQR, IRevenueManager,IQRContracts,BranchInfo,BranchInfoInput,IBMFactory,IMeosFactory,RobotContracts,MeosContracts,IRobotFactory} from "./interfaces/IAgent.sol";
+import {IPublicfullDB,PaginationResult,License,AgentInfo,Agent, AgentAnalytics, TimeFilter, IIQRFactory, ILoyaltyFactory, IRestaurantLoyaltySystem, IAgentIQR, IRevenueManager,IQRContracts,BranchInfo,BranchInfoInput,IBMFactory,IMeosFactory,RobotContracts,MeosContracts,IRobotFactory} from "./interfaces/IAgent.sol";
 // import "forge-std/console.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -168,6 +168,7 @@ contract EnhancedAgentManagement is AgentManagement {
         });
          // Grant permissions with error handling
          _grantPermissions(_walletAddress, _permissions,agentToBranchIds[_walletAddress]);
+        initAgentDB(_walletAddress);
         emit AgentCreated(_walletAddress, _storeName, block.timestamp);
         return true;
     }

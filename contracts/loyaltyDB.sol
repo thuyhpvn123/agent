@@ -85,7 +85,8 @@ interface FullDB {
  */
 contract PublicfullDB is Initializable, OwnableUpgradeable, UUPSUpgradeable{
 
-    FullDB public fullDB = FullDB(0x0000000000000000000000000000000000000106);
+    // FullDB public fullDB = FullDB(0x0000000000000000000000000000000000000106);
+    FullDB public fullDB;
 
     // ── DB name prefixes ──────────────────────────────────────────
     string constant DB_POINT_HISTORY_PREFIX = "loyalty_point_history_";
@@ -173,6 +174,8 @@ contract PublicfullDB is Initializable, OwnableUpgradeable, UUPSUpgradeable{
     function initialize() public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        fullDB = FullDB(0x0000000000000000000000000000000000000106);
+
         
     }
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

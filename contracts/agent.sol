@@ -14,7 +14,7 @@ import {MeosFactory} from "./meosFactory.sol";
 import {RobotFactory} from "./robotFactory.sol";
 // import {BMFactory} from "./bmFactory.sol";
 
-import "forge-std/console.sol";
+// import "forge-std/console.sol";
 contract AgentManagement is 
     Initializable,
     OwnableUpgradeable,
@@ -339,7 +339,8 @@ contract AgentManagement is
         address _revenueManager,
         address _bmFactory,
         address _meosFactory,
-        address _robotFactory
+        address _robotFactory,
+        address _publicfullDB
     ) external onlySuperAdmin {
         iqrFactory = _iqrFactory;
         loyaltyFactory = _loyaltyFactory;
@@ -347,6 +348,7 @@ contract AgentManagement is
         bmFactory = _bmFactory;
         meosFactory = _meosFactory;
         robotFactory = _robotFactory;
+        publicfullDB = _publicfullDB;
     }
     
     function getSubLocationCount(address _agent) public view returns (uint256) {

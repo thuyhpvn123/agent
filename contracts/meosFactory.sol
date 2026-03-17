@@ -28,7 +28,9 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     address public POINTS;
     address public freeGasSc;
     address public iqrFactory;
-    uint256[49] private __gap;
+    mapping(address => bool) public isAdminMeos;
+
+    uint256[47] private __gap;
     event AgentMeosCreated(address indexed agent,uint indexed branchId ,address indexed contractAddr, uint256 timestamp);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -44,6 +46,10 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     modifier onlyEnhanceSC {
         require(msg.sender == enhancedAgent,"only enhancedAgent contract can call");
+        _;
+    }
+    modifier onlyAdminMeos() {
+        require(isAdminMeos[msg.sender] || msg.sender == owner(), "only adminMeos can call");
         _;
     }
     function setEnhancedAgent(address _enhancedAgent) external onlyOwner {
@@ -159,7 +165,32 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function getAllDeployedContracts() external view returns (address[] memory) {
         return deployedContracts;
     }
-    
+    function upgradeBeacon(
+        address _agent,
+        uint _branchId,
+        address _newImplStaffMeos,
+        address _newImplNetCafeUser,
+        address _newImplNetCafeSession,
+        address _newImplNetCafeTopUp,
+        address _newImplNetCafeSpend,
+        address _newImplNetCafeManagement,
+        address _newImplNetCafeStation
+
+    ) external onlyOwner {
+        address agentMeos = agentMeosContracts[_agent][_branchId];
+        IAgentMeos(agentMeos).upgradeBeacon(
+            _newImplStaffMeos,
+            _newImplNetCafeUser,
+            _newImplNetCafeSession,
+            _newImplNetCafeTopUp,
+            _newImplNetCafeSpend,
+            _newImplNetCafeManagement,
+            _newImplNetCafeStation
+        );}
+    function setAdminMeos(address admin, bool isAdmin) external onlyOwner {
+        require(admin != address(0), "Invalid address");
+        isAdminMeos[admin] = isAdmin;
+    }    
 }
 
 

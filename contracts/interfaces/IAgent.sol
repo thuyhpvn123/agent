@@ -245,7 +245,15 @@ interface IAgentMeos {
         address _NetCafeManagement,
         address _NetCafeStation
     )external ;
-
+    function upgradeBeacon(
+        address _newImplStaffMeos,
+        address _newImplNetCafeUser,
+        address _newImplNetCafeSession,
+        address _newImplNetCafeTopUp,
+        address _newImplNetCafeSpend,
+        address _newImplNetCafeManagement,
+        address _newImplNetCafeStation
+    ) external ;
 }
 interface IBMFactory {
     function getAgentMEOSContract(address _agent, uint _branchId) external view returns (address) ;
@@ -411,4 +419,7 @@ interface IRobotFactory {
     function getRobotSCByAgentFromFactory(address _agent, uint _branchId) external view returns (RobotContracts memory);
     function getManagementSCByAgentsFromFactory(address _agent, uint[] memory _branchIds) external view returns (address[] memory managementScs, uint count) ;
 
+}
+interface IPublicfullDB {
+    function initAgentDbs(address _agent) external;
 }

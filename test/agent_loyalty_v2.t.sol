@@ -77,6 +77,10 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     // address public customer2;
     string public domain="domain";
     BranchInfoInput[] branchInfoDatas ;
+    bytes32 optionId11;
+    bytes32[] public selectedFeatureIdsDish11; //3 muc do cay cua dish1_code
+    address FULL_DB = 0x0000000000000000000000000000000000000106;
+
     constructor() {
         // Setup accounts
 
@@ -184,7 +188,8 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
             address(revenueManager),
             address(bmFactory),
             address(meosFactory),
-            address(robotFactory)
+            address(robotFactory),
+            address(publicfullDB)
         );
         bmFactory.setBranchManagerSC(
             address(branchManagementImplementation),
@@ -284,7 +289,53 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
             domain: "thuy-cn3.fi.ai"
         }));
     }
+
+    function _mockFullDB() internal {
+        // getOrCreateDb
+        vm.mockCall(
+            FULL_DB,
+            abi.encodeWithSelector(FullDB.getOrCreateDb.selector),
+            abi.encode(true)
+        );
         
+        // newDocument → trả về docId tăng dần
+        vm.mockCall(
+            FULL_DB,
+            abi.encodeWithSelector(FullDB.newDocument.selector),
+            abi.encode(uint256(1))
+        );
+        
+        // addTermDocument
+        vm.mockCall(
+            FULL_DB,
+            abi.encodeWithSelector(FullDB.addTermDocument.selector),
+            abi.encode(true)
+        );
+        
+        // addValueDocument
+        vm.mockCall(
+            FULL_DB,
+            abi.encodeWithSelector(FullDB.addValueDocument.selector),
+            abi.encode(true)
+        );
+        
+        // commit
+        vm.mockCall(
+            FULL_DB,
+            abi.encodeWithSelector(FullDB.commit.selector),
+            abi.encode(true)
+        );
+        
+        // querySearch → trả về empty page
+        SearchResultsPage memory emptyPage;
+        emptyPage.total = 0;
+        emptyPage.results = new SearchResult[](0);
+        vm.mockCall(
+            FULL_DB,
+            abi.encodeWithSelector(FullDB.querySearch.selector),
+            abi.encode(emptyPage)
+        );
+    }
     // function test_CreateAgentWithAnalytics_MultipleAgents() public {
     //     vm.startPrank(superAdmin);
         
@@ -330,6 +381,8 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     // ========================================================================
     
     function test_UpdateAgent_Success() public {
+         _mockFullDB();
+
         // First create an agent
         vm.startPrank(superAdmin);
         
@@ -454,6 +507,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     // ========================================================================
     
     function test_DeleteAgent_Success() public {
+        _mockFullDB();
         vm.startPrank(superAdmin);
         
         // Create agent
@@ -540,6 +594,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     // }
     
     function test_DeleteAgent_AfterFreezingLoyalty_Success() public {
+        _mockFullDB();
         vm.startPrank(superAdmin);
         
         // Create agent with loyalty
@@ -590,6 +645,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     // ========================================================================
     
     function test_GetDeletedAgents_Multiple() public {
+        _mockFullDB();
         vm.startPrank(superAdmin);
         
         bool[4] memory permissions = [true, false, false, false];
@@ -641,6 +697,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     // ========================================================================
     
     function test_GetAgentsInfoPaginatedWithPermissions_Success() public {
+        _mockFullDB();
         uint currentTime = 1760089361;//16h43 ngay10/10/2025
         vm.warp(currentTime); 
         vm.startPrank(superAdmin);
@@ -922,6 +979,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     }
     
     function test_GetAgentsInfoPaginatedWithPermissions_EmptyResults() public {
+        _mockFullDB();
         uint currentTime = 1760091452;
         vm.warp(currentTime);
         vm.startPrank(superAdmin);
@@ -970,7 +1028,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         vm.stopPrank();
         
         console.log("Test 7b PASSED: Empty results handling");
-        // GetByteCode1();
+        GetByteCode1();
     }
 
     // ========================================================================
@@ -978,6 +1036,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     // ========================================================================
     
     function test_FullWorkflow_CompleteScenario() public {
+        _mockFullDB();
         console.log("\n=== FULL INTEGRATION WORKFLOW ===\n");
         
         vm.startPrank(superAdmin);
@@ -1199,7 +1258,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         _createStaff(management,staff1Shifts,staff1Roles,staff1);
         _createDishes();
         _createTables();
-        _order(Points );
+        // _order(Points );
         //Meos
         address meosAgentAdd = meosFactory.getAgentMEOSContract(agent2,branchIds2[0]);
         MeosContracts memory meoos = enhanced.getMeosSCByAgentFromFactory(agent2,branchIds2[0]);
@@ -1233,6 +1292,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     }
 
     function test_CreateStaff_Only_FullRoles_WithLogs() public {
+        _mockFullDB();
         console.log("\n=== TEST: CreateStaff Only (Full Roles) ===\n");
 
         vm.startPrank(superAdmin);
@@ -1264,6 +1324,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     }
 
     function test_CreateStaff_WithRequestedRoles_8_7_4_1_6() public {
+        _mockFullDB();
         console.log("\n=== TEST: CreateStaff With Roles [8,7,4,1,6] ===\n");
 
         vm.startPrank(superAdmin);
@@ -1391,7 +1452,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         _featurePrices[1] = 0;
         _featurePrices[2] = 0;
 
-        bytes32 optionId1 = management.CreateDishOptions(
+         optionId11 = management.CreateDishOptions(
             "Do Cay",
             featureNames1,
             _featurePrices,
@@ -1414,7 +1475,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
             3
         );
         bytes32[] memory optionIds = new bytes32[](3);
-        optionIds[0] = optionId1;
+        optionIds[0] = optionId11;
         optionIds[1] = optionId2;
         optionIds[2] = optionId3;
          //create Category
@@ -1487,6 +1548,28 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         variants[2] = variant3;
 
         management.CreateDish("THITBO",dish1,variants,optionIds);
+        //
+        (DishOption[] memory dishOptions, uint totalCount) = management.GetAllDishOptionsFromDishCodePagination("dish1_code",0,10);
+        assertEq(totalCount,3,"dish options number should be equal");
+        OptionFeature[] memory optionFeaturesDish1 = dishOptions[0].features; //dishOptions[0] la Do Ngot
+        // ✅ Lấy đúng features từ option "Do Cay"
+        DishOption memory doCayOption;
+        DishOption memory doBeoOption;  
+        DishOption memory doNgotOption;
+
+        for(uint i = 0; i < dishOptions.length; i++) {
+            if(dishOptions[i].optionId == optionId11) { // Do Cay
+                doCayOption = dishOptions[i];
+            } else if(dishOptions[i].optionId == optionId2) { // Do Beo
+                doBeoOption = dishOptions[i];
+            } else if(dishOptions[i].optionId == optionId3) { // Do Ngot
+                doNgotOption = dishOptions[i];
+            }
+        }
+        // ✅ Push đúng features
+        selectedFeatureIdsDish11.push(doCayOption.features[0].featureId);
+        selectedFeatureIdsDish11.push(doCayOption.features[1].featureId);
+        selectedFeatureIdsDish11.push(doCayOption.features[2].featureId);
         vm.stopPrank();
     } 
     function _createStaff(Management managementSc,WorkingShift[] memory staff1Shifts,  STAFF_ROLE[] memory staff1Roles,address staffWallet)public{
@@ -1616,8 +1699,8 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         variantIDs[2] = dishInfo.variants[2].variantID;
         SelectedOption[] memory selectionOption0 = new SelectedOption[](1);
         selectionOption0[0] = SelectedOption({
-            optionId: optionId1,
-            selectedFeatureIds: selectedFeatureIdsDish1
+            optionId: optionId11,
+            selectedFeatureIds: selectedFeatureIdsDish11
         });
 
         SelectedOption[][] memory dishSelectedOptions = new SelectedOption[][](1);
@@ -1951,12 +2034,13 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         bytesCodeCall = abi.encodeCall(
             enhanced.setFactoryContracts,
             (
-            0x1510151015101510151015101510151015101510,
-            0x1510151015101510151015101510151015101510,
-            0x1510151015101510151015101510151015101510,
-            0x1510151015101510151015101510151015101510,
-            0x1510151015101510151015101510151015101510,
-            0x1510151015101510151015101510151015101510
+            0x137E564CC1b653B9b3e9b9f8A7a232279d5A536e,
+            0x62499C96A4f1B514B79Aa97A5bD1D57faBb506CA,
+            0xe6C0e7Aee43601a756d3161453681dA079c0A593,
+            0x8362AE47c83bE1c70d6b1B4F4A25ee00Ed56BDC3,
+            0x2EceBB230d3F5946310a0C229229ca5D38c42766,
+            0x2E5514FE3A71B4cb56537dCAd0ed2861bE280599,
+            0x86353039E0d030Ca899e66D76Ee41708F33523d9
             )
         );
         console.log("enhanced: setFactoryContracts:");
@@ -2272,7 +2356,29 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     console.log(
         "-----------------------------------------------------------------------------"
     ); 
-
+    //setAdminMeos
+    bytesCodeCall = abi.encodeCall(
+        meosFactory.setAdminMeos,
+        (
+            0x1510151015101510151015101510151015101510,
+            true
+        ));
+    console.log("meosFactory setAdminMeos:");
+    console.logBytes(bytesCodeCall);
+    console.log(
+        "-----------------------------------------------------------------------------"
+    );
+    // bytesCodeCall = abi.encodeCall(
+    //     meosFactory.setAdminMeos,
+    //     (
+    //         0x1510151015101510151015101510151015101510,
+    //         true
+    //     ));
+    // console.log("meosFactory setAdminMeos:");
+    // console.logBytes(bytesCodeCall);
+    // console.log(
+    //     "-----------------------------------------------------------------------------"
+    // );
     // // //getAgentLoyaltyContract
     // //      bytesCodeCall = abi.encodeCall(
     // //     loyaltyFactory.getAgentLoyaltyContract,

@@ -33,6 +33,7 @@ solc --bin --abi contracts/StaffMeos.sol -o output_StaffMeos/   --base-path .   
 solc --bin --abi contracts/meosFactory.sol -o output/output_meosFactory/   --base-path .   --include-path node_modules --via-ir --overwrite
 solc --bin --abi contracts/bmFactory.sol -o output/output_bmFactory/   --base-path .   --include-path node_modules --via-ir --overwrite
 solc --bin --abi contracts/robotFactory.sol -o output/output_robotFactory/   --base-path .   --include-path node_modules --via-ir --overwrite
+solc --bin --abi contracts/loyaltyDB.sol -o output/output_loyaltyDB/   --base-path .   --include-path node_modules --via-ir --overwrite
 
 Net
 solc --bin --abi contracts/net_repo/contracts/v2/NetCafeUserV2.sol -o output/NetCafeUserV2/   --base-path .   --include-path node_modules --via-ir --overwrite
