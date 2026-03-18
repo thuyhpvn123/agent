@@ -79,37 +79,72 @@ contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address _iqrFactory,
         address _meosFactory
     )external onlyOwner {
-        if(robotInputs._StaffRobotSC != address(0)){StaffRobotSC = robotInputs._StaffRobotSC;} 
-        if(robotInputs._RobotRegistryV2IMP != address(0)){RobotRegistryV2IMP = robotInputs._RobotRegistryV2IMP;} 
-        if(robotInputs._RobotActiveV2IMP != address(0)){RobotActiveV2IMP = robotInputs._RobotActiveV2IMP;} 
-        if(robotInputs._RobotDataUploadTrainingV2IMP != address(0)){RobotDataUploadTrainingV2IMP = robotInputs._RobotDataUploadTrainingV2IMP;} 
-        if(robotInputs._RobotObservationTrainingV2IMP != address(0)){RobotObservationTrainingV2IMP = robotInputs._RobotObservationTrainingV2IMP;} 
-        if(robotInputs._RobotLocationV2IMP != address(0)){RobotLocationV2IMP = robotInputs._RobotLocationV2IMP;} 
-        if(robotInputs._RobotQuestionV2IMP != address(0)){RobotQuestionV2IMP = robotInputs._RobotQuestionV2IMP;} 
-        if(robotInputs._RobotDashboadV2IMP != address(0)){RobotDashboadV2IMP = robotInputs._RobotDashboadV2IMP;} 
-        if(robotInputs._RobotTestingV2IMP != address(0)){RobotTestingV2IMP = robotInputs._RobotTestingV2IMP;} 
+        if(robotInputs._StaffRobotSC != address(0)){
+            // StaffRobotSC = robotInputs._StaffRobotSC;
+            require(address(StaffRobotBeacon) == address(0), "Already initialized Beacon Robot");
+            StaffRobotBeacon = new UpgradeableBeacon(robotInputs._StaffRobotSC, address(this));
+        } 
+        if(robotInputs._RobotRegistryV2IMP != address(0)){
+            // RobotRegistryV2IMP = robotInputs._RobotRegistryV2IMP;
+            require(address(RobotRegistryBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotRegistryBeacon= new UpgradeableBeacon(robotInputs._RobotRegistryV2IMP, address(this));
+
+        } 
+        if(robotInputs._RobotActiveV2IMP != address(0)){
+            // RobotActiveV2IMP = robotInputs._RobotActiveV2IMP;
+            require(address(RobotActiveBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotActiveBeacon = new UpgradeableBeacon(robotInputs._RobotActiveV2IMP, address(this));
+        } 
+        if(robotInputs._RobotDataUploadTrainingV2IMP != address(0)){
+            // RobotDataUploadTrainingV2IMP = robotInputs._RobotDataUploadTrainingV2IMP;
+            require(address(RobotLoadBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotLoadBeacon= new UpgradeableBeacon(robotInputs._RobotDataUploadTrainingV2IMP, address(this));
+        } 
+        if(robotInputs._RobotObservationTrainingV2IMP != address(0)){
+            // RobotObservationTrainingV2IMP = robotInputs._RobotObservationTrainingV2IMP;
+            require(address(RobotObservationTrainingBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotObservationTrainingBeacon= new UpgradeableBeacon(robotInputs._RobotObservationTrainingV2IMP, address(this));
+
+        } 
+        if(robotInputs._RobotLocationV2IMP != address(0)){
+            // RobotLocationV2IMP = robotInputs._RobotLocationV2IMP;
+            require(address(RobotLocationBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotLocationBeacon= new UpgradeableBeacon(robotInputs._RobotLocationV2IMP, address(this));
+        } 
+        if(robotInputs._RobotQuestionV2IMP != address(0)){
+            // RobotQuestionV2IMP = robotInputs._RobotQuestionV2IMP;
+            require(address(RobotQuestionBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotQuestionBeacon= new UpgradeableBeacon(robotInputs._RobotQuestionV2IMP, address(this));
+        } 
+        if(robotInputs._RobotDashboadV2IMP != address(0)){
+            // RobotDashboadV2IMP = robotInputs._RobotDashboadV2IMP;
+            require(address(RobotDashboadBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotDashboadBeacon= new UpgradeableBeacon(robotInputs._RobotDashboadV2IMP, address(this));
+        } 
+        if(robotInputs._RobotTestingV2IMP != address(0)){
+            // RobotTestingV2IMP = robotInputs._RobotTestingV2IMP;
+            require(address(RobotTestingBeacon) == address(0), "Already initialized Beacon Robot");
+            RobotTestingBeacon= new UpgradeableBeacon(robotInputs._RobotTestingV2IMP, address(this));
+        } 
         if(_freeGasSc != address(0)){freeGasSc = _freeGasSc;} 
         if(robotInputs._StaffAgentStore != address(0)){StaffAgentStore = robotInputs._StaffAgentStore;}  
         if(_iqrFactory != address(0)){iqrFactory = _iqrFactory;}
         if(_meosFactory != address(0)){meosFactory = _meosFactory;}
-        initBeacons(
-            robotInputs
-        );
     }
-    function initBeacons(
-        RobotInputs memory robotInputs
-    )internal {
-        StaffRobotBeacon = new UpgradeableBeacon(robotInputs._StaffRobotSC, address(this));
-        RobotActiveBeacon = new UpgradeableBeacon(robotInputs._RobotActiveV2IMP, address(this));
-        RobotDashboadBeacon= new UpgradeableBeacon(robotInputs._RobotDashboadV2IMP, address(this));
-        RobotLoadBeacon= new UpgradeableBeacon(robotInputs._RobotDataUploadTrainingV2IMP, address(this));
-        RobotLocationBeacon= new UpgradeableBeacon(robotInputs._RobotLocationV2IMP, address(this));
-        RobotQuestionBeacon= new UpgradeableBeacon(robotInputs._RobotQuestionV2IMP, address(this));
-        RobotRegistryBeacon= new UpgradeableBeacon(robotInputs._RobotRegistryV2IMP, address(this));
-        RobotTestingBeacon= new UpgradeableBeacon(robotInputs._RobotTestingV2IMP, address(this));
-        RobotObservationTrainingBeacon= new UpgradeableBeacon(robotInputs._RobotObservationTrainingV2IMP, address(this));
+    // function initBeacons(
+    //     RobotInputs memory robotInputs
+    // )internal {
+    //     StaffRobotBeacon = new UpgradeableBeacon(robotInputs._StaffRobotSC, address(this));
+    //     RobotActiveBeacon = new UpgradeableBeacon(robotInputs._RobotActiveV2IMP, address(this));
+    //     RobotDashboadBeacon= new UpgradeableBeacon(robotInputs._RobotDashboadV2IMP, address(this));
+    //     RobotLoadBeacon= new UpgradeableBeacon(robotInputs._RobotDataUploadTrainingV2IMP, address(this));
+    //     RobotLocationBeacon= new UpgradeableBeacon(robotInputs._RobotLocationV2IMP, address(this));
+    //     RobotQuestionBeacon= new UpgradeableBeacon(robotInputs._RobotQuestionV2IMP, address(this));
+    //     RobotRegistryBeacon= new UpgradeableBeacon(robotInputs._RobotRegistryV2IMP, address(this));
+    //     RobotTestingBeacon= new UpgradeableBeacon(robotInputs._RobotTestingV2IMP, address(this));
+    //     RobotObservationTrainingBeacon= new UpgradeableBeacon(robotInputs._RobotObservationTrainingV2IMP, address(this));
 
-    }
+    // }
 
     function createAgentRobot(
         address _agent, 

@@ -36,3 +36,5 @@ point:
 
 res1:
 	clear && forge test --match-path test/res1.t.sol --via-ir -vvv
+test:
+	forge test --match-test test_FullWorkflow_CompleteScenario -vvv --via-ir

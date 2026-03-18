@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "./interfaces/IAgent.sol";
 import "./interfaces/IPoint.sol";
 import "./interfaces/IFreeGas.sol";
-// import "forge-std/console.sol";
+import "forge-std/console.sol";
 /**
  * @title LoyaltyFactory
  * @dev Factory tạo loyalty contracts dùng Beacon Proxy pattern.
@@ -162,7 +162,6 @@ contract LoyaltyFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         // Deploy BeaconProxy trỏ vào loyaltyBeacon
         BeaconProxy proxy = new BeaconProxy(address(loyaltyBeacon), initData);
         address contractAddr = address(proxy);
-        // console.log("Created AgentLoyalty BeaconProxy at:", contractAddr);
         // bytes32 ROLE_ADMIN = keccak256("ROLE_ADMIN");
         IPoint(address(proxy)).setSearchIndex(publicfullDB);
         agentLoyaltyContracts[_agent] = contractAddr;
@@ -193,7 +192,7 @@ contract LoyaltyFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     ) external onlyEnhanceSC returns (address) {
         address loyaltyProxy = agentLoyaltyContracts[_agent];
         require(loyaltyProxy != address(0), "Loyalty contract not found");
-
+        console.log("setManagementSC la:",_management);
         IPoint(loyaltyProxy).setManagementSC(_management);
         IPoint(loyaltyProxy).setOrder(_order, _branchId);
         IPoint(loyaltyProxy).setTopUp(_topUp, _branchId);

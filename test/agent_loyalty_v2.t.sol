@@ -24,6 +24,8 @@ import "../contracts/meosFactory.sol";
 import "../contracts/loyaltyDB.sol";
 import "./NetCafeV2FullFlow.t.sol";
 import "./RobotFullFlowV2.t.sol";
+import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 // import "../contracts/StaffRobot.sol";
 // import {BranchInfoInput} from "../contracts/interfaces/IAgent.sol";
 /**
@@ -1028,7 +1030,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         vm.stopPrank();
         
         console.log("Test 7b PASSED: Empty results handling");
-        GetByteCode1();
+        // GetByteCode1();
     }
 
     // ========================================================================
@@ -1256,6 +1258,9 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         console.log("memberGroups[0].name:",memberGroups[0].name);
         (WorkingShift[] memory staff1Shifts, STAFF_ROLE[] memory staff1Roles) = _createPositionAndWorkingShif(management);
         _createStaff(management,staff1Shifts,staff1Roles,staff1);
+        bool kq1 = management.isStaff(staff1);
+        console.log("isStaff:",kq1);
+        
         _createDishes();
         _createTables();
         _order(Points );
@@ -1743,6 +1748,8 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         management.UpdateTotalRevenueReport(currentTime,payment.foodCharge-payment.discountAmount);
         management.SortDishesWithOrderRange(0,10);
         management.UpdateRankDishes();
+        // address impl = UpgradeableBeacon(management).implementation();
+        // console.log("management laaaa:",impl);
         vm.stopPrank();
         vm.startPrank(staff1);
         uint tableId = order.getTableBySession(sessionIdT1);

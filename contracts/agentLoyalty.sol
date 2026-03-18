@@ -12,7 +12,7 @@ import "./interfaces/IManagement.sol";
 import "./interfaces/IMeos.sol";
 
 import "./lib/DateTimeTZ.sol";
-// import "forge-std/console.sol";
+import "forge-std/console.sol";
 
 import {PublicfullDB} from "./loyaltyDB.sol";
 /**
@@ -1159,7 +1159,12 @@ contract RestaurantLoyaltySystem is
     // VIEW
     // ================================================================
 
-    function getMember(address _member) external onlyStaffOrAdmin view returns (Member memory) {
+    // function getMember(address _member) external onlyStaffOrAdmin view returns (Member memory) {
+    function getMember(address _member) external  view returns (Member memory) {
+
+        console.log("MANAGEMENT lafaaa:",address(MANAGEMENT));
+        require(IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender) ||IManagement(MANAGEMENT).isStaff(msg.sender), "Only staff or admin");
+
         return members[_member];
     }
     function getPaymentConfig() external view returns (uint256 ,uint256 ) 

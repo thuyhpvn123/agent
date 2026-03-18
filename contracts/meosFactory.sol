@@ -40,6 +40,7 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     UpgradeableBeacon public NetCafeManagementBeacon;
     UpgradeableBeacon public NetCafeStationBeacon;
     mapping(address => bool) public isAdminMeos;
+    LastUpdateData public lastUpdateMeos;
 
     uint256[47] private __gap;
     event AgentMeosCreated(address indexed agent,uint indexed branchId ,address indexed contractAddr, uint256 timestamp);
@@ -79,35 +80,74 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address _freeGasSc,
         address _iqrFactory
     )external onlyAdminMeos {
-        if(_StaffMeosSC != address(0)){StaffMeosSC = _StaffMeosSC;} 
-        if(_NetCafeUserIMP != address(0)){NetCafeUserIMP = _NetCafeUserIMP;} 
-        if(_NetCafeSessionIMP != address(0)){NetCafeSessionIMP = _NetCafeSessionIMP;} 
-        if(_NetCafeTopUpIMP != address(0)){NetCafeTopUpIMP = _NetCafeTopUpIMP;} 
-        if(_NetCafeSpendIMP != address(0)){NetCafeSpendIMP = _NetCafeSpendIMP;} 
-        if(_NetCafeManagementIMP != address(0)){NetCafeManagementIMP = _NetCafeManagementIMP;} 
-        if(_NetCafeStationIMP != address(0)){NetCafeStationIMP = _NetCafeStationIMP;} 
+        if(_StaffMeosSC != address(0)){
+            // StaffMeosSC = _StaffMeosSC;
+            require(address(StaffMeosBeacon) == address(0), "Already initialized Beacon Meos");
+            StaffMeosBeacon = new UpgradeableBeacon(_StaffMeosSC, address(this));
+        } 
+        if(_NetCafeUserIMP != address(0)){
+            // NetCafeUserIMP = _NetCafeUserIMP;
+            require(address(NetCafeUserBeacon) == address(0), "Already initialized Beacon Meos");
+            NetCafeUserBeacon     = new UpgradeableBeacon(_NetCafeUserIMP, address(this));
+        } 
+        if(_NetCafeSessionIMP != address(0)){
+            // NetCafeSessionIMP = _NetCafeSessionIMP;
+            require(address(NetCafeSessionBeacon) == address(0), "Already initialized Beacon Meos");
+            NetCafeSessionBeacon  = new UpgradeableBeacon(_NetCafeSessionIMP, address(this));
+        } 
+        if(_NetCafeTopUpIMP != address(0)){
+            // NetCafeTopUpIMP = _NetCafeTopUpIMP;
+            require(address(NetCafeTopUpBeacon) == address(0), "Already initialized Beacon Meos");
+            NetCafeTopUpBeacon    = new UpgradeableBeacon(_NetCafeTopUpIMP, address(this));
+        } 
+        if(_NetCafeSpendIMP != address(0)){
+            // NetCafeSpendIMP = _NetCafeSpendIMP;
+            require(address(NetCafeSpendBeacon) == address(0), "Already initialized Beacon Meos");
+            NetCafeSpendBeacon    = new UpgradeableBeacon(_NetCafeSpendIMP, address(this));
+        } 
+        if(_NetCafeManagementIMP != address(0)){
+            // NetCafeManagementIMP = _NetCafeManagementIMP;
+            require(address(NetCafeManagementBeacon) == address(0), "Already initialized Beacon Meos");
+            NetCafeManagementBeacon = new UpgradeableBeacon(_NetCafeManagementIMP, address(this));
+        } 
+        if(_NetCafeStationIMP != address(0)){
+            // NetCafeStationIMP = _NetCafeStationIMP;
+            require(address(NetCafeStationBeacon) == address(0), "Already initialized Beacon Meos");
+            NetCafeStationBeacon  = new UpgradeableBeacon(_NetCafeStationIMP, address(this));
+        } 
         if(_freeGasSc != address(0)){freeGasSc = _freeGasSc;} 
         if(_StaffAgentStore != address(0)){StaffAgentStore = _StaffAgentStore;}  
         if(_iqrFactory != address(0)){iqrFactory = _iqrFactory;}
-        initBeacons(
-            _StaffMeosSC,
-            _NetCafeUserIMP,
-            _NetCafeSessionIMP,
-            _NetCafeTopUpIMP,
-            _NetCafeSpendIMP,
-            _NetCafeManagementIMP,
-            _NetCafeStationIMP
-        );
     }
+    //     function initBeacons(
+    //     address _StaffMeosSC,
+    //     address _NetCafeUserIMP,
+    //     address _NetCafeSessionIMP,
+    //     address _NetCafeTopUpIMP,
+    //     address _NetCafeSpendIMP,
+    //     address _NetCafeManagementIMP,
+    //     address _NetCafeStationIMP
+    // ) internal {
+    //     require(address(NetCafeUserBeacon) == address(0), "Already initialized Beacon Meos");
+        
+    //     StaffMeosBeacon       = new UpgradeableBeacon(_StaffMeosSC, address(this));
+    //     NetCafeUserBeacon     = new UpgradeableBeacon(_NetCafeUserIMP, address(this));
+    //     NetCafeSessionBeacon  = new UpgradeableBeacon(_NetCafeSessionIMP, address(this));
+    //     NetCafeTopUpBeacon    = new UpgradeableBeacon(_NetCafeTopUpIMP, address(this));
+    //     NetCafeSpendBeacon    = new UpgradeableBeacon(_NetCafeSpendIMP, address(this));
+    //     NetCafeManagementBeacon = new UpgradeableBeacon(_NetCafeManagementIMP, address(this));
+    //     NetCafeStationBeacon  = new UpgradeableBeacon(_NetCafeStationIMP, address(this));
+    // }
+
     function createAgentMeos(address _agent, uint _branchId, bool _hasIqr) external onlyEnhanceSC returns (address) {
         require(
-            StaffMeosSC != address(0) && 
-            NetCafeUserIMP != address(0) && 
-            NetCafeSessionIMP != address(0) && 
-            NetCafeTopUpIMP != address(0)&& 
-            NetCafeSpendIMP != address(0) &&
-            NetCafeManagementIMP != address(0) &&
-            NetCafeStationIMP != address(0) ,
+            address(StaffMeosBeacon) != address(0) && 
+            address(NetCafeUserBeacon) != address(0) && 
+            address(NetCafeSessionBeacon) != address(0) && 
+            address(NetCafeTopUpBeacon) != address(0)&& 
+            address(NetCafeSpendBeacon) != address(0) &&
+            address(NetCafeManagementBeacon) != address(0) &&
+            address(NetCafeStationBeacon) != address(0) ,
             "addresses of meos can be address(0)"
         );
         require(_agent != address(0), "Invalid agent");
@@ -207,25 +247,6 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }    
 
     // Hàm khởi tạo beacons (gọi 1 lần sau deploy)
-    function initBeacons(
-        address _StaffMeosSC,
-        address _NetCafeUserIMP,
-        address _NetCafeSessionIMP,
-        address _NetCafeTopUpIMP,
-        address _NetCafeSpendIMP,
-        address _NetCafeManagementIMP,
-        address _NetCafeStationIMP
-    ) internal {
-        require(address(NetCafeUserBeacon) == address(0), "Already initialized");
-        
-        StaffMeosBeacon       = new UpgradeableBeacon(_StaffMeosSC, address(this));
-        NetCafeUserBeacon     = new UpgradeableBeacon(_NetCafeUserIMP, address(this));
-        NetCafeSessionBeacon  = new UpgradeableBeacon(_NetCafeSessionIMP, address(this));
-        NetCafeTopUpBeacon    = new UpgradeableBeacon(_NetCafeTopUpIMP, address(this));
-        NetCafeSpendBeacon    = new UpgradeableBeacon(_NetCafeSpendIMP, address(this));
-        NetCafeManagementBeacon = new UpgradeableBeacon(_NetCafeManagementIMP, address(this));
-        NetCafeStationBeacon  = new UpgradeableBeacon(_NetCafeStationIMP, address(this));
-    }
 
     // Upgrade global: 1 lần → tất cả agent được upgrade
     function upgradeBeaconGlobal(
@@ -244,6 +265,10 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if (_newImplNetCafeSpend != address(0))    NetCafeSpendBeacon.upgradeTo(_newImplNetCafeSpend);
         if (_newImplNetCafeManagement != address(0)) NetCafeManagementBeacon.upgradeTo(_newImplNetCafeManagement);
         if (_newImplNetCafeStation != address(0))  NetCafeStationBeacon.upgradeTo(_newImplNetCafeStation);
+        lastUpdateMeos = LastUpdateData({
+            admin: msg.sender,
+            updateAt: block.timestamp
+        });
     }
     /**
      * @dev Transfer beacon ownership sang địa chỉ khác nếu cần.

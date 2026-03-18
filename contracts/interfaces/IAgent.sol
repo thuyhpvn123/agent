@@ -201,7 +201,10 @@ struct License {
     string version;
     bytes32 hardwareFingerprint;
 }
-
+struct LastUpdateData{
+    address admin;
+    uint256 updateAt;
+}
     // struct TxRecord {
     //     uint256         id;
     //     address         member;

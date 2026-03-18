@@ -37,7 +37,7 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     UpgradeableBeacon public ReportBeacon;
     UpgradeableBeacon public TimekeepingBeacon;
     mapping(address => bool) public isAdminIqr;
-
+    LastUpdateData public lastUpdateIqr;
     uint256[49] private __gap;
     event AgentIQRCreated(address indexed agent,uint indexed branchId ,address indexed contractAddr, uint256 timestamp);
     event ContractUpgraded(string oldVersion, string newVersion, uint256 timestamp);
@@ -82,27 +82,33 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address _noti,
         address _revenueManager, //proxy dùng cho từng agent
         address _StaffAgentStore, //proxy dùng cho tất cả agent
-        // address _BRANCH_MANAGEMENT_IMP,
-        // address _HISTORY_TRACKING_IMP,
         address _freeGasSc
     )external onlyOwner {
-        if(_MANAGEMENT_IMP != address(0)){MANAGEMENT = _MANAGEMENT_IMP;} 
-        if(_ORDER_IMP != address(0)){ORDER = _ORDER_IMP;} 
-        if(_REPORT_IMP != address(0)){REPORT = _REPORT_IMP;} 
-        if(_TIMEKEEPING_IMP != address(0)){TIMEKEEPING = _TIMEKEEPING_IMP;} 
+        if(_MANAGEMENT_IMP != address(0)){
+            // MANAGEMENT = _MANAGEMENT_IMP;
+            require(address(ManagementBeacon) == address(0),"Already initialized Beacon Iqr");
+            ManagementBeacon = new UpgradeableBeacon(_MANAGEMENT_IMP, address(this));
+        } 
+        if(_ORDER_IMP != address(0)){
+            // ORDER = _ORDER_IMP;
+            require(address(OrderBeacon) == address(0),"Already initialized Beacon Iqr");
+            OrderBeacon = new UpgradeableBeacon(_ORDER_IMP, address(this));
+        } 
+        if(_REPORT_IMP != address(0)){
+            // REPORT = _REPORT_IMP;
+            require(address(ReportBeacon) == address(0),"Already initialized Beacon Iqr");
+            ReportBeacon = new UpgradeableBeacon(_REPORT_IMP, address(this));
+        } 
+        if(_TIMEKEEPING_IMP != address(0)){
+            // TIMEKEEPING = _TIMEKEEPING_IMP;
+            require(address(TimekeepingBeacon) == address(0),"Already initialized Beacon Iqr");
+            TimekeepingBeacon = new UpgradeableBeacon(_TIMEKEEPING_IMP, address(this));
+        } 
         if(_cardVisa != address(0)){cardVisa = _cardVisa;} 
         if(_noti != address(0)){noti = _noti;} 
         if(_revenueManager != address(0)){revenueManager = _revenueManager;} 
-        // if(_BRANCH_MANAGEMENT_IMP != address(0)){BRANCH_MANAGEMENT_IMP = _BRANCH_MANAGEMENT_IMP;} 
-        // if(_HISTORY_TRACKING_IMP != address(0)){HISTORY_TRACKING_IMP = _HISTORY_TRACKING_IMP;} 
         if(_freeGasSc != address(0)){freeGasSc = _freeGasSc;} 
         if(_StaffAgentStore != address(0)){StaffAgentStore = _StaffAgentStore;}  
-        initBeacons(
-            _MANAGEMENT_IMP,
-            _ORDER_IMP,
-            _REPORT_IMP,
-            _TIMEKEEPING_IMP
-        );
         
     }
     function createAgentIQR(address _agent, uint _branchId) external onlyEnhanceSC returns (address) {
@@ -193,18 +199,7 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function getVersion() external view returns (string memory) {
         return version;
     }
-    function initBeacons(
-        address MANAGEMENT_IMP,
-        address ORDER_IMP,
-        address REPORT_IMP,
-        address TIMEKEEPING_IMP
-    )internal {
-        ManagementBeacon = new UpgradeableBeacon(MANAGEMENT_IMP, address(this));
-        OrderBeacon = new UpgradeableBeacon(ORDER_IMP, address(this));
-        ReportBeacon = new UpgradeableBeacon(REPORT_IMP, address(this));
-        TimekeepingBeacon = new UpgradeableBeacon(TIMEKEEPING_IMP, address(this));
 
-    }
     function upgradeBeaconGlobal(
         address _newImplManagement,
         address _newImplOrder,
@@ -224,7 +219,11 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if(_newImplTimekeeping != address(0)){
             TimekeepingBeacon.upgradeTo(_newImplTimekeeping);
         }
-
+        lastUpdateIqr = LastUpdateData({
+            admin: msg.sender,
+            updateAt: block.timestamp
+        });
+        
     }
         /**
      * @dev Transfer beacon ownership sang địa chỉ khác nếu cần.
