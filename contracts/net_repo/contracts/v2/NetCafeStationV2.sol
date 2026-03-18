@@ -1,22 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {NetCafeStaffUpgradeable} from "./NetCafeStaffUpgradeable.sol";
 import {INetCafeManagementV2} from "./interfaces/INetCafeManagementV2.sol";
 import {INetCafeUserV2} from "./interfaces/INetCafeUserV2.sol";
 import {INetCafeSessionV2} from "./interfaces/INetCafeSessionV2.sol";
 
-contract NetCafeStationV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgradeable {
+contract NetCafeStationV2 is
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    NetCafeStaffUpgradeable
+{
     struct Station {
         bytes32 pcId;
         string name;
         bytes32 groupId;
+        // bytes32 pricePolicyId;
         uint256 balanceVND;
         address currentUserAddress;
         address currentSession;
         string currentUserName;
+        string currentUserCccd;
+        string currentUserEmail;
         bool online;
         uint256 lastActiveAt;
         bool maintenance;
@@ -44,30 +51,55 @@ contract NetCafeStationV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUp
         __NetCafeStaff_init(_staffContract);
         require(_userContract != address(0), "Invalid user contract");
         require(_sessionContract != address(0), "Invalid session contract");
-        require(_managementContract != address(0), "Invalid management contract");
+        require(
+            _managementContract != address(0),
+            "Invalid management contract"
+        );
         userContract = INetCafeUserV2(_userContract);
         sessionContract = INetCafeSessionV2(_sessionContract);
         managementContract = INetCafeManagementV2(_managementContract);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 
     function setStatus(address sessionWallet, bytes32 pcId) external {
-        (string memory stationName, bytes32 groupId, bool exists) =
-            managementContract.getStationMeta(pcId);
+        (
+            string memory stationName,
+            bytes32 groupId,
+            // bytes32 pricePolicyId,
+            bool exists
+        ) = managementContract.getStationMeta(pcId);
         require(exists, "Station not found");
-        INetCafeSessionV2.Session memory s = sessionContract.getSession(sessionWallet);
+        INetCafeSessionV2.Session memory s = sessionContract.getSession(
+            sessionWallet
+        );
         require(s.active, "Session inactive");
         require(s.pcId == pcId, "Invalid PC");
 
-        (bool online, uint256 lastLoginAt, uint256 balanceVND, string memory displayName) =
-            userContract.getUserStationData(s.user);
+        (
+            bool online,
+            uint256 lastLoginAt,
+            uint256 balanceVND,
+            string memory displayName,
+            string memory cccd,
+            string memory email
+        ) = userContract.getUserStationData(
+            s.user,
+            sessionWallet,
+            s.sessionKeyHash,
+            pcId
+        );
 
         require(online, "User not online");
 
         stations[pcId].pcId = pcId;
         stations[pcId].name = stationName;
         stations[pcId].groupId = groupId;
+        // stations[pcId].pricePolicyId = pricePolicyId;
+        stations[pcId].currentUserCccd = cccd;
+        stations[pcId].currentUserEmail = email;
         stations[pcId].online = online;
         stations[pcId].currentUserName = displayName;
         stations[pcId].currentUserAddress = s.user;
@@ -76,8 +108,17 @@ contract NetCafeStationV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUp
         stations[pcId].balanceVND = balanceVND;
         emit StationStatusChanged(sessionWallet, pcId);
     }
+    function isStationOnline(bytes32 pcId) external view returns (bool) {
+        return stations[pcId].online;
+    }
+    function isStationMaintenance(bytes32 pcId) external view returns (bool) {
+        return stations[pcId].maintenance;
+    }
 
-    function setMaintenance(bytes32 pcId, bool maintenance) external onlyFinanceStaff {
+    function setMaintenance(
+        bytes32 pcId,
+        bool maintenance
+    ) external onlyFinanceStaff {
         (, , bool exists) = managementContract.getStationMeta(pcId);
         require(exists, "Station not found");
         stations[pcId].maintenance = maintenance;
@@ -102,12 +143,18 @@ contract NetCafeStationV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUp
         uint256 offset,
         uint256 limit
     ) external view returns (Station[] memory) {
-        bytes32[] memory ids = managementContract.getStationIdsPaged(offset, limit);
+        bytes32[] memory ids = managementContract.getStationIdsPaged(
+            offset,
+            limit
+        );
         Station[] memory list = new Station[](ids.length);
         for (uint256 i = 0; i < ids.length; i++) {
             bytes32 pcId = ids[i];
-            (string memory name, bytes32 groupId, bool exists) =
-                managementContract.getStationMeta(pcId);
+            (
+                string memory name,
+                bytes32 groupId,
+                bool exists
+            ) = managementContract.getStationMeta(pcId);
             if (!exists) {
                 continue;
             }
@@ -120,6 +167,8 @@ contract NetCafeStationV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUp
                 currentUserAddress: stored.currentUserAddress,
                 currentSession: stored.currentSession,
                 currentUserName: stored.currentUserName,
+                currentUserCccd: stored.currentUserCccd,
+                currentUserEmail: stored.currentUserEmail,
                 online: stored.online,
                 lastActiveAt: stored.lastActiveAt,
                 maintenance: stored.maintenance
@@ -130,4 +179,3 @@ contract NetCafeStationV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUp
 
     uint256[50] private __gap;
 }
-

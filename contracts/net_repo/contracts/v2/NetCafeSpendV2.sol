@@ -1,13 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {NetCafeStaffUpgradeable} from "./NetCafeStaffUpgradeable.sol";
 import {INetCafeUserV2} from "./interfaces/INetCafeUserV2.sol";
 import {INetCafeSessionV2} from "./interfaces/INetCafeSessionV2.sol";
 
-contract NetCafeSpendV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgradeable {
+// interface IAuditLog {
+//     function writeLog(
+//         uint256 branchId,
+//         address actor,
+//         string calldata actorName,
+//         string calldata action,
+//         bytes32 targetId,
+//         string calldata detail
+//     ) external returns (uint256);
+// }
+
+contract NetCafeSpendV2 is
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    NetCafeStaffUpgradeable
+{
     enum SpendType {
         PLAY_TIME
     }
@@ -36,10 +51,14 @@ contract NetCafeSpendV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgr
         SpendType spendType
     );
 
+    /* =======================
+           INIT
+    ======================= */
     function initialize(
         address _staffContract,
         address _userContract,
         address _sessionContract
+        // address _auditLogContract
     ) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
@@ -48,9 +67,12 @@ contract NetCafeSpendV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgr
         require(_sessionContract != address(0), "Invalid session contract");
         userContract = INetCafeUserV2(_userContract);
         sessionContract = INetCafeSessionV2(_sessionContract);
+        // auditLog = IAuditLog(_auditLogContract);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 
     function spendVND(address wallet, uint256 amountVND) external {
         require(userContract.isActive(wallet), "User not found");
@@ -63,14 +85,25 @@ contract NetCafeSpendV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgr
         bytes32 pcId,
         uint256 pricePerMinute
     ) external onlyFinanceStaff {
-        INetCafeSessionV2.Session memory s = sessionContract.getSession(sessionWallet);
+        INetCafeSessionV2.Session memory s = sessionContract.getSession(
+            sessionWallet
+        );
 
         require(s.active, "Session inactive");
         require(s.sessionKeyHash == sessionKeyHash, "Invalid session key");
         require(s.pcId == pcId, "Invalid PC");
 
-        (bool active, bool online, uint256 lastLoginAt, uint256 balanceVND) =
-            userContract.getUserStatus(s.user);
+        (
+            bool active,
+            bool online,
+            uint256 lastLoginAt,
+            uint256 balanceVND
+        ) = userContract.getUserStatus(
+            s.user,
+            sessionWallet,
+            sessionKeyHash,
+            pcId
+        );
 
         require(active, "User not found");
         require(online, "User not online");
@@ -128,6 +161,5 @@ contract NetCafeSpendV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgr
         return list;
     }
 
-    uint256[50] private __gap;
+    uint256[47] private __gap;
 }
-

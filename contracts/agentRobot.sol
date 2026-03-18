@@ -42,17 +42,7 @@ contract AgentRobot is OwnableUpgradeable {
     constructor(
         address _agent,
         address _enhancedAgent,
-        RobotInputs memory robotInputs,
-        // address _StaffRobotSCIMP,
-        // address _RobotRegistryV2IMP,
-        // address _RobotActiveV2IMP,
-        // address _RobotDataUploadTrainingV2IMP,
-        // address _RobotObservationTrainingV2IMP,
-        // address _RobotTestingV2IMP,
-        // address _RobotDashboadV2IMP,
-        // address _RobotLocationV2IMP,
-        // address _RobotQuestionV2IMP,
-        // address _StaffAgentStore,
+        RobotInputsBeacon memory robotInputs,
         address _iqrFactory,
         address _meosFactory,
         uint _branchId,
@@ -69,16 +59,7 @@ contract AgentRobot is OwnableUpgradeable {
         initializeIQRSCS(
             _agent,
             robotInputs,
-            // _StaffRobotSCIMP,
-            // _RobotRegistryV2IMP,
-            // _RobotActiveV2IMP,
-            // _RobotDataUploadTrainingV2IMP,
-            // _RobotObservationTrainingV2IMP,
-            // _RobotTestingV2IMP,
-            // _RobotDashboadV2IMP,
-            // _RobotLocationV2IMP,
-            // _RobotQuestionV2IMP,
-            // _StaffAgentStore,
+
             _branchId,
             _hasIqr,
             _hasMeos
@@ -101,17 +82,7 @@ contract AgentRobot is OwnableUpgradeable {
 
     function initializeIQRSCS(
         address _agent,
-        RobotInputs memory robotInputs,
-        // address _StaffRobotSC_IMP,
-        // address _RobotRegistryV2IMP,
-        // address _RobotActiveV2IMP,
-        // address _RobotDataUploadTrainingV2IMP,
-        // address _RobotObservationTrainingV2IMP,
-        // address _RobotTestingV2IMP,
-        // address _RobotDashboadV2IMP,
-        // address _RobotLocationV2IMP,
-        // address _RobotQuestionV2IMP,
-        // address _StaffAgentStore,
+        RobotInputsBeacon memory robotInputs,
         uint _branchId,
         bool _hasIqr,
         bool _hasMeos
@@ -130,13 +101,13 @@ contract AgentRobot is OwnableUpgradeable {
 
         }else{
             BeaconProxy StaffRobotSC_PROXY = new BeaconProxy(
-                address(robotInputs._StaffRobotSC),
+                address(robotInputs.StaffRobotBeacon),
                 abi.encodeWithSelector(IStaffRobot.initialize.selector)
             );
             StaffRobotSC_PROXY_ADD = address(StaffRobotSC_PROXY);
         }
         require(address(RobotRegistryBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotRegistryBeacon = new UpgradeableBeacon(robotInputs._RobotRegistryV2IMP, address(this));
+        RobotRegistryBeacon = UpgradeableBeacon(robotInputs.RobotRegistryBeacon);
 
         BeaconProxy RobotRegistryV2_PROXY = new BeaconProxy(
             address(RobotRegistryBeacon),
@@ -144,7 +115,7 @@ contract AgentRobot is OwnableUpgradeable {
             StaffRobotSC_PROXY_ADD)
         );
         require(address(RobotActiveBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotActiveBeacon = new UpgradeableBeacon(robotInputs._RobotActiveV2IMP, address(this));
+        RobotActiveBeacon = UpgradeableBeacon(robotInputs.RobotActiveBeacon);
         BeaconProxy RobotActiveV2_PROXY = new BeaconProxy(
             address(RobotActiveBeacon),
             abi.encodeWithSelector(IRobotActiveV2.initialize.selector,
@@ -153,7 +124,7 @@ contract AgentRobot is OwnableUpgradeable {
             )
         );
         require(address(RobotLoadBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotLoadBeacon = new UpgradeableBeacon(robotInputs._RobotDataUploadTrainingV2IMP, address(this));
+        RobotLoadBeacon = UpgradeableBeacon(robotInputs.RobotLoadBeacon);
         BeaconProxy RobotDataUploadTrainingV2_PROXY = new BeaconProxy(
             address(RobotLoadBeacon),
             abi.encodeWithSelector(IRobotDataUploadTrainingV2.initialize.selector,
@@ -162,7 +133,7 @@ contract AgentRobot is OwnableUpgradeable {
             )
         );
         require(address(RobotObservationTrainingBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotObservationTrainingBeacon = new UpgradeableBeacon(robotInputs._RobotObservationTrainingV2IMP, address(this));
+        RobotObservationTrainingBeacon = UpgradeableBeacon(robotInputs.RobotObservationTrainingBeacon);
         BeaconProxy RobotObservationTrainingV2_PROXY = new BeaconProxy(
             address(RobotObservationTrainingBeacon), 
             abi.encodeWithSelector(IRobotObservationTrainingV2.initialize.selector, 
@@ -171,7 +142,7 @@ contract AgentRobot is OwnableUpgradeable {
             )
         );
         require(address(RobotTestingBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotTestingBeacon = new UpgradeableBeacon(robotInputs._RobotTestingV2IMP, address(this));
+        RobotTestingBeacon = UpgradeableBeacon(robotInputs.RobotTestingBeacon);
         BeaconProxy RobotTestingV2_PROXY = new BeaconProxy(
             address(RobotTestingBeacon), 
             abi.encodeWithSelector(IRobotTestingV2.initialize.selector, 
@@ -180,7 +151,7 @@ contract AgentRobot is OwnableUpgradeable {
             )
         );
         require(address(RobotDashboadBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotDashboadBeacon = new UpgradeableBeacon(robotInputs._RobotDashboadV2IMP, address(this));
+        RobotDashboadBeacon = UpgradeableBeacon(robotInputs.RobotDashboadBeacon);
         BeaconProxy RobotDashboadV2_PROXY = new BeaconProxy(
             address(RobotDashboadBeacon), 
             abi.encodeWithSelector(IRobotDashboadV2.initialize.selector, 
@@ -188,7 +159,7 @@ contract AgentRobot is OwnableUpgradeable {
             )
         );
         require(address(RobotLocationBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotLocationBeacon = new UpgradeableBeacon(robotInputs._RobotLocationV2IMP, address(this));
+        RobotLocationBeacon = UpgradeableBeacon(robotInputs.RobotLocationBeacon);
         BeaconProxy RobotLocationV2_PROXY = new BeaconProxy(
             address(RobotLocationBeacon), 
             abi.encodeWithSelector(IRobotLocationV2.initialize.selector, 
@@ -197,7 +168,7 @@ contract AgentRobot is OwnableUpgradeable {
             )
         );
         require(address(RobotQuestionBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        RobotQuestionBeacon = new UpgradeableBeacon(robotInputs._RobotQuestionV2IMP, address(this));
+        RobotQuestionBeacon = UpgradeableBeacon(robotInputs.RobotQuestionBeacon);
         BeaconProxy RobotQuestionV2_PROXY = new BeaconProxy(
             address(RobotQuestionBeacon), 
             abi.encodeWithSelector(IRobotQuestionV2.initialize.selector)
@@ -213,7 +184,7 @@ contract AgentRobot is OwnableUpgradeable {
             RobotLocationV2: address(RobotLocationV2_PROXY),
             RobotQuestionV2: address(RobotQuestionV2_PROXY),
             owner:  _agent,
-            StaffAgentStore: robotInputs._StaffAgentStore,
+            StaffAgentStore: robotInputs.StaffAgentStore,
             Points: address(0)
         });
         mAgentToRobot[_agent][_branchId] = robot;

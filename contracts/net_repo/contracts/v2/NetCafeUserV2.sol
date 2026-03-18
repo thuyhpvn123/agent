@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {INetCafeSessionV2} from "./interfaces/INetCafeSessionV2.sol";
 import {NetCafeStaffUpgradeable} from "./NetCafeStaffUpgradeable.sol";
 
-contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgradeable {
+contract NetCafeUserV2 is
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    NetCafeStaffUpgradeable
+{
     struct User {
         address wallet;
         string displayName;
@@ -20,6 +25,7 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         uint256 lastLoginAt;
         string deviceName;
     }
+    INetCafeSessionV2 public sessionContract;
 
     address[] public userList;
     mapping(address => User) public users;
@@ -43,7 +49,7 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
 
     event ModuleUpdated(address indexed module, bool allowed);
     event UserRegistered(address indexed wallet, uint256 initialVND);
-    event OTPGenerated(address indexed wallet, uint256 otp);
+    event OTPGenerated(address indexed wallet, uint256 otp, uint256 expiresAt);
     event BalanceUpdated(address indexed wallet, uint256 newBalanceVND);
     event UserLogin(address indexed wallet, string deviceName, uint256 loginAt);
     event AddressLogin(address indexed wallet);
@@ -68,10 +74,31 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         __NetCafeStaff_init(_staffContract);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 
     modifier onlyModule() {
         require(modules[msg.sender], "Not module");
+        _;
+    }
+    modifier onlyValidSession(
+        address sessionWallet,
+        bytes32 sessionKeyHash,
+        bytes32 pcId
+    ) {
+        require(
+            address(sessionContract) != address(0),
+            "Session contract not set"
+        );
+        require(
+            sessionContract.validateSession(
+                sessionWallet,
+                sessionKeyHash,
+                pcId
+            ),
+            "Invalid or expired session"
+        );
         _;
     }
 
@@ -97,7 +124,7 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         string calldata phone,
         string calldata email,
         uint256 initialVND
-    ) external onlyFinanceStaff {
+    ) external {
         require(wallet != address(0), "Invalid wallet");
         require(!walletUsed[wallet], "Wallet already registered");
         require(!phoneUsed[phone], "Phone already registered");
@@ -133,14 +160,14 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         userList.push(wallet);
 
         emit UserRegistered(wallet, initialVND);
-        emit OTPGenerated(wallet, otp);
+        emit OTPGenerated(wallet, otp, block.timestamp + 5 minutes);
         emit BalanceUpdated(wallet, initialVND);
     }
 
     function getUsers(
         uint256 offset,
         uint256 limit
-    ) external view onlyFinanceStaff returns (User[] memory) {
+    ) external view returns (User[] memory) {
         uint256 total = userList.length;
 
         if (offset >= total) {
@@ -181,7 +208,7 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         return wallet;
     }
 
-    function generateOTPForTest(address userWallet) external onlyFinanceStaff {
+    function generateOTPForTest(address userWallet) external {
         require(users[userWallet].active, "User not registered");
 
         uint256 oldOtp = users[userWallet].otp;
@@ -251,7 +278,7 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         string memory _email,
         string memory _phoneNumber,
         string memory _cccd
-    ) external onlyFinanceStaff {
+    ) external {
         require(walletUsed[wallet], "Wallet is not registered ");
         User storage user = users[wallet];
         user.displayName = _name;
@@ -269,37 +296,72 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         return users[wallet].online;
     }
 
-    function getDisplayName(address wallet) external view returns (string memory) {
+    function getDisplayName(
+        address wallet
+    ) external view returns (string memory) {
         return users[wallet].displayName;
     }
 
-    function getUserStatus(address wallet) external view returns (
-        bool active,
-        bool online,
-        uint256 lastLoginAt,
-        uint256 balanceVND
-    ) {
+    function getUserStatus(
+        address wallet,
+        address sessionWallet, // thêm param
+        bytes32 sessionKeyHash,
+        bytes32 pcId
+    )
+        external
+        onlyValidSession(sessionWallet, sessionKeyHash, pcId)
+        returns (
+            bool active,
+            bool online,
+            uint256 lastLoginAt,
+            uint256 balanceVND
+        )
+    {
         User storage u = users[wallet];
         return (u.active, u.online, u.lastLoginAt, u.balanceVND);
     }
 
-    function getUserStationData(address wallet) external view returns (
-        bool online,
-        uint256 lastLoginAt,
-        uint256 balanceVND,
-        string memory displayName
-    ) {
+    function getUserStationData(
+        address wallet,
+        address sessionWallet, // thêm param
+        bytes32 sessionKeyHash,
+        bytes32 pcId
+    )
+        external
+        onlyValidSession(sessionWallet, sessionKeyHash, pcId)
+        returns (
+            bool online,
+            uint256 lastLoginAt,
+            uint256 balanceVND,
+            string memory displayName,
+            string memory cccd,
+            string memory email
+        )
+    {
         User storage u = users[wallet];
-        return (u.online, u.lastLoginAt, u.balanceVND, u.displayName);
+        return (
+            u.online,
+            u.lastLoginAt,
+            u.balanceVND,
+            u.displayName,
+            u.cccd,
+            u.email
+        );
     }
 
-    function increaseBalance(address wallet, uint256 amount) external onlyModule {
+    function increaseBalance(
+        address wallet,
+        uint256 amount
+    ) external onlyModule {
         require(users[wallet].active, "User not found");
         users[wallet].balanceVND += amount;
         emit BalanceUpdated(wallet, users[wallet].balanceVND);
     }
 
-    function decreaseBalance(address wallet, uint256 amount) external onlyModule {
+    function decreaseBalance(
+        address wallet,
+        uint256 amount
+    ) external onlyModule {
         require(users[wallet].active, "User not found");
         require(users[wallet].balanceVND >= amount, "Insufficient balance");
         users[wallet].balanceVND -= amount;
@@ -316,7 +378,9 @@ contract NetCafeUserV2 is OwnableUpgradeable, UUPSUpgradeable, NetCafeStaffUpgra
         u.deviceName = "";
         emit UserLogout(wallet, block.timestamp);
     }
+    function setSessionContract(address _session) external onlyOwner {
+        sessionContract = INetCafeSessionV2(_session);
+    }
 
     uint256[50] private __gap;
 }
-

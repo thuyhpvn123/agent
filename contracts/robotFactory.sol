@@ -10,6 +10,8 @@ import {AgentRobot} from "./agentRobot.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 // import "forge-std/console.sol";
 import "./interfaces/IFreeGas.sol";
+import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     
     
@@ -31,6 +33,16 @@ contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     address public freeGasSc;
     address public iqrFactory;
     address public meosFactory;
+    UpgradeableBeacon public StaffRobotBeacon;
+    UpgradeableBeacon public RobotActiveBeacon;
+    UpgradeableBeacon public RobotDashboadBeacon;
+    UpgradeableBeacon public RobotLoadBeacon;
+    UpgradeableBeacon public RobotLocationBeacon;
+    UpgradeableBeacon public RobotQuestionBeacon;
+    UpgradeableBeacon public RobotRegistryBeacon;
+    UpgradeableBeacon public RobotTestingBeacon;
+    UpgradeableBeacon public RobotObservationTrainingBeacon;
+    mapping(address => bool) public isAdminRobot;
     uint256[49] private __gap;
     event AgentRobotCreated(address indexed agent,uint indexed branchId ,address indexed contractAddr, uint256 timestamp);
 
@@ -42,6 +54,7 @@ contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function initialize() public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        isAdminRobot[msg.sender];
     }
     
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -49,6 +62,14 @@ contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         require(msg.sender == enhancedAgent,"only enhancedAgent contract can call");
         _;
     }
+    modifier onlyAdminRobot() {
+        require(isAdminRobot[msg.sender] || msg.sender == owner(), "only adminMeos can call");
+        _;
+    }
+    function setAdminRobot(address admin, bool isAdmin) external onlyOwner {
+        require(admin != address(0), "Invalid address");
+        isAdminRobot[admin] = isAdmin;
+    }  
     function setEnhancedAgent(address _enhancedAgent) external onlyOwner {
         enhancedAgent = _enhancedAgent;
     }
@@ -58,20 +79,6 @@ contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address _iqrFactory,
         address _meosFactory
     )external onlyOwner {
-        // address _StaffRobotSC, //implement ,not proxy
-        // address _RobotRegistryV2IMP,
-        // address _RobotActiveV2IMP,
-        // address _RobotDataUploadTrainingV2IMP,
-        // address _RobotObservationTrainingV2IMP,
-        // address _RobotTestingV2IMP,
-        // address _RobotDashboadV2IMP,
-        // address _RobotLocationV2IMP,
-        // address _RobotQuestionV2IMP,        
-        // address _StaffAgentStore, //proxy dùng cho tất cả agent
-        // address _freeGasSc,
-        // address _iqrFactory,
-        // address _meosFactory
-    // )external onlyOwner {
         if(robotInputs._StaffRobotSC != address(0)){StaffRobotSC = robotInputs._StaffRobotSC;} 
         if(robotInputs._RobotRegistryV2IMP != address(0)){RobotRegistryV2IMP = robotInputs._RobotRegistryV2IMP;} 
         if(robotInputs._RobotActiveV2IMP != address(0)){RobotActiveV2IMP = robotInputs._RobotActiveV2IMP;} 
@@ -85,50 +92,61 @@ contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if(robotInputs._StaffAgentStore != address(0)){StaffAgentStore = robotInputs._StaffAgentStore;}  
         if(_iqrFactory != address(0)){iqrFactory = _iqrFactory;}
         if(_meosFactory != address(0)){meosFactory = _meosFactory;}
-
-        
+        initBeacons(
+            robotInputs
+        );
     }
-    function createAgentRobot(address _agent, uint _branchId, bool _hasIqr,bool _hasMeos) external onlyEnhanceSC returns (address) {
+    function initBeacons(
+        RobotInputs memory robotInputs
+    )internal {
+        StaffRobotBeacon = new UpgradeableBeacon(robotInputs._StaffRobotSC, address(this));
+        RobotActiveBeacon = new UpgradeableBeacon(robotInputs._RobotActiveV2IMP, address(this));
+        RobotDashboadBeacon= new UpgradeableBeacon(robotInputs._RobotDashboadV2IMP, address(this));
+        RobotLoadBeacon= new UpgradeableBeacon(robotInputs._RobotDataUploadTrainingV2IMP, address(this));
+        RobotLocationBeacon= new UpgradeableBeacon(robotInputs._RobotLocationV2IMP, address(this));
+        RobotQuestionBeacon= new UpgradeableBeacon(robotInputs._RobotQuestionV2IMP, address(this));
+        RobotRegistryBeacon= new UpgradeableBeacon(robotInputs._RobotRegistryV2IMP, address(this));
+        RobotTestingBeacon= new UpgradeableBeacon(robotInputs._RobotTestingV2IMP, address(this));
+        RobotObservationTrainingBeacon= new UpgradeableBeacon(robotInputs._RobotObservationTrainingV2IMP, address(this));
+
+    }
+
+    function createAgentRobot(
+        address _agent, 
+        uint _branchId, 
+        bool _hasIqr,
+        bool _hasMeos
+    ) external onlyEnhanceSC returns (address) {
         require(
-            StaffRobotSC != address(0) && 
-            RobotRegistryV2IMP != address(0) && 
-            RobotActiveV2IMP != address(0) && 
-            RobotDataUploadTrainingV2IMP != address(0)&& 
-            RobotObservationTrainingV2IMP != address(0) &&
-            RobotLocationV2IMP != address(0) &&
-            RobotQuestionV2IMP != address(0) &&
-            RobotDashboadV2IMP != address(0) &&
-            RobotTestingV2IMP != address(0) ,
+            address(StaffRobotBeacon) != address(0) && 
+            address(RobotRegistryBeacon) != address(0) && 
+            address(RobotActiveBeacon) != address(0) && 
+            address(RobotLoadBeacon) != address(0)&& 
+            address(RobotObservationTrainingBeacon) != address(0) &&
+            address(RobotLocationBeacon) != address(0) &&
+            address(RobotQuestionBeacon) != address(0) &&
+            address(RobotDashboadBeacon) != address(0) &&
+            address(RobotTestingBeacon) != address(0) ,
             "addresses of robot can be address(0)"
         );
         require(_agent != address(0), "Invalid agent");
         require(agentRobotContracts[_agent][_branchId] == address(0), "Contract already exists");
-        RobotInputs memory robotInputs = RobotInputs({
-            _StaffRobotSC: StaffRobotSC,
-            _RobotRegistryV2IMP: RobotRegistryV2IMP,
-            _RobotActiveV2IMP: RobotActiveV2IMP,
-            _RobotDataUploadTrainingV2IMP: RobotDataUploadTrainingV2IMP,
-            _RobotObservationTrainingV2IMP: RobotObservationTrainingV2IMP,
-            _RobotLocationV2IMP: RobotLocationV2IMP,
-            _RobotQuestionV2IMP: RobotQuestionV2IMP,
-            _RobotDashboadV2IMP: RobotDashboadV2IMP,
-            _RobotTestingV2IMP: RobotTestingV2IMP,
-            _StaffAgentStore: StaffAgentStore
+        RobotInputsBeacon memory robotInputs = RobotInputsBeacon({
+            StaffRobotBeacon: address(StaffRobotBeacon),
+            RobotRegistryBeacon: address(RobotRegistryBeacon),
+            RobotActiveBeacon: address(RobotActiveBeacon),
+            RobotLoadBeacon: address(RobotLoadBeacon),
+            RobotObservationTrainingBeacon: address(RobotObservationTrainingBeacon),
+            RobotLocationBeacon: address(RobotLocationBeacon),
+            RobotQuestionBeacon: address(RobotQuestionBeacon),
+            RobotDashboadBeacon: address(RobotDashboadBeacon),
+            RobotTestingBeacon: address(RobotTestingBeacon),
+            StaffAgentStore: StaffAgentStore
         });
         AgentRobot newContract = new AgentRobot(
             _agent,
             enhancedAgent,
             robotInputs,
-            // StaffRobotSC,
-            // RobotRegistryV2IMP,
-            // RobotActiveV2IMP,
-            // RobotDataUploadTrainingV2IMP,
-            // RobotObservationTrainingV2IMP,
-            // RobotTestingV2IMP,
-            // RobotDashboadV2IMP,
-            // RobotLocationV2IMP,
-            // RobotQuestionV2IMP,
-            // StaffAgentStore,
             iqrFactory,
             meosFactory,
             _branchId,
@@ -211,7 +229,98 @@ contract RobotFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function getAllDeployedContracts() external view returns (address[] memory) {
         return deployedContracts;
     }
-    
+    function upgradeBeaconGlobal(
+        address _newImplRobotActive,
+        address _newImplRobotDashboad,
+        address _newImplRobotLoad,
+        address _newImplRobotLocation,
+        address _newImplRobotQuestion,
+        address _newImplRobotRegistry,
+        address _newImplRobotTesting,
+        address _newImplRobotObservationTraining
+    ) external onlyAdminRobot {
+        
+        if(_newImplRobotActive != address(0)){
+            RobotActiveBeacon.upgradeTo(_newImplRobotActive);
+        }
+        if(_newImplRobotDashboad != address(0)){
+            RobotDashboadBeacon.upgradeTo(_newImplRobotDashboad);
+        }
+        if(_newImplRobotLoad != address(0)){
+            RobotLoadBeacon.upgradeTo(_newImplRobotLoad);
+        }
+        if(_newImplRobotLocation != address(0)){
+            RobotLocationBeacon.upgradeTo(_newImplRobotLocation);
+        }
+        if(_newImplRobotQuestion != address(0)){
+            RobotQuestionBeacon.upgradeTo(_newImplRobotQuestion);
+        }
+        if(_newImplRobotRegistry != address(0)){
+            RobotRegistryBeacon.upgradeTo(_newImplRobotRegistry);
+        }
+
+        if(_newImplRobotTesting != address(0)){
+            RobotTestingBeacon.upgradeTo(_newImplRobotTesting);
+        }
+        if(_newImplRobotObservationTraining != address(0)){
+            RobotObservationTrainingBeacon.upgradeTo(_newImplRobotObservationTraining);
+        }
+
+    }
+            /**
+     * @dev Transfer beacon ownership sang địa chỉ khác nếu cần.
+     *      Hiếm khi dùng — chỉ khi muốn trao quyền upgrade beacon cho bên khác.
+     */
+    function transferBeaconOwnership(address _newOwner) external onlyOwner {
+        require(
+            address(RobotActiveBeacon) != address(0) &&
+            address(RobotDashboadBeacon) != address(0) &&
+            address(RobotLoadBeacon) != address(0) &&
+            address(RobotLocationBeacon) != address(0)&& 
+            address(RobotQuestionBeacon) != address(0)&& 
+            address(RobotRegistryBeacon) != address(0)&& 
+            address(RobotTestingBeacon) != address(0)&& 
+            address(RobotObservationTrainingBeacon) != address(0),
+        "Beacon not created");
+        require(_newOwner != address(0), "Invalid address");
+        RobotActiveBeacon.transferOwnership(_newOwner);
+        RobotDashboadBeacon.transferOwnership(_newOwner);
+        RobotLoadBeacon.transferOwnership(_newOwner);
+        RobotLocationBeacon.transferOwnership(_newOwner);
+        RobotQuestionBeacon.transferOwnership(_newOwner);
+        RobotRegistryBeacon.transferOwnership(_newOwner);
+        RobotTestingBeacon.transferOwnership(_newOwner);
+        RobotObservationTrainingBeacon.transferOwnership(_newOwner);
+    }
+    /**
+     * @dev Lấy địa chỉ implementation hiện tại từ beacon
+     */
+    function currentImplementation() external view returns (
+        address,address,address,address,address,address,address,address) {
+        require(
+            address(RobotActiveBeacon) != address(0) &&
+            address(RobotDashboadBeacon) != address(0) &&
+            address(RobotLoadBeacon) != address(0) &&
+            address(RobotLocationBeacon) != address(0)&& 
+            address(RobotQuestionBeacon) != address(0)&& 
+            address(RobotRegistryBeacon) != address(0)&& 
+            address(RobotTestingBeacon) != address(0)&& 
+            address(RobotObservationTrainingBeacon) != address(0),
+            "Beacon not created"
+        );
+        return (
+            RobotActiveBeacon.implementation(),
+            RobotDashboadBeacon.implementation(),
+            RobotLoadBeacon.implementation(),
+            RobotLocationBeacon.implementation(),
+            RobotQuestionBeacon.implementation(),
+            RobotRegistryBeacon.implementation(),
+            RobotTestingBeacon.implementation(),
+            RobotObservationTrainingBeacon.implementation()
+
+        );
+    }
+
 }
 
 

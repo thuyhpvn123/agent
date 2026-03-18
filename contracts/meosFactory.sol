@@ -10,6 +10,9 @@ import {AgentMeos} from "./agentMeos.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 // import "forge-std/console.sol";
 import "./interfaces/IFreeGas.sol";
+import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+
 contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     
     
@@ -28,6 +31,14 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     address public POINTS;
     address public freeGasSc;
     address public iqrFactory;
+    // === Shared Beacons (thêm vào) ===
+    UpgradeableBeacon public StaffMeosBeacon;
+    UpgradeableBeacon public NetCafeUserBeacon;
+    UpgradeableBeacon public NetCafeSessionBeacon;
+    UpgradeableBeacon public NetCafeTopUpBeacon;
+    UpgradeableBeacon public NetCafeSpendBeacon;
+    UpgradeableBeacon public NetCafeManagementBeacon;
+    UpgradeableBeacon public NetCafeStationBeacon;
     mapping(address => bool) public isAdminMeos;
 
     uint256[47] private __gap;
@@ -41,6 +52,7 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function initialize() public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        isAdminMeos[msg.sender] == true;
     }
     
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -66,7 +78,7 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address _StaffAgentStore, //proxy dùng cho tất cả agent
         address _freeGasSc,
         address _iqrFactory
-    )external onlyOwner {
+    )external onlyAdminMeos {
         if(_StaffMeosSC != address(0)){StaffMeosSC = _StaffMeosSC;} 
         if(_NetCafeUserIMP != address(0)){NetCafeUserIMP = _NetCafeUserIMP;} 
         if(_NetCafeSessionIMP != address(0)){NetCafeSessionIMP = _NetCafeSessionIMP;} 
@@ -77,6 +89,15 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if(_freeGasSc != address(0)){freeGasSc = _freeGasSc;} 
         if(_StaffAgentStore != address(0)){StaffAgentStore = _StaffAgentStore;}  
         if(_iqrFactory != address(0)){iqrFactory = _iqrFactory;}
+        initBeacons(
+            _StaffMeosSC,
+            _NetCafeUserIMP,
+            _NetCafeSessionIMP,
+            _NetCafeTopUpIMP,
+            _NetCafeSpendIMP,
+            _NetCafeManagementIMP,
+            _NetCafeStationIMP
+        );
     }
     function createAgentMeos(address _agent, uint _branchId, bool _hasIqr) external onlyEnhanceSC returns (address) {
         require(
@@ -92,7 +113,21 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         require(_agent != address(0), "Invalid agent");
         require(agentMeosContracts[_agent][_branchId] == address(0), "Contract already exists");
         
-        AgentMeos newContract = new AgentMeos(_agent,enhancedAgent,StaffMeosSC,NetCafeUserIMP,NetCafeSessionIMP,NetCafeTopUpIMP,NetCafeSpendIMP,NetCafeManagementIMP,NetCafeStationIMP,StaffAgentStore,iqrFactory,_branchId,_hasIqr);
+        AgentMeos newContract = new AgentMeos(
+            _agent,
+            enhancedAgent,
+            address(StaffMeosBeacon),     // truyền beacon address
+            address(NetCafeUserBeacon),
+            address(NetCafeSessionBeacon),
+            address(NetCafeTopUpBeacon),
+            address(NetCafeSpendBeacon),
+            address(NetCafeManagementBeacon),
+            address(NetCafeStationBeacon),
+            StaffAgentStore,
+            iqrFactory,
+            _branchId,
+            _hasIqr
+        );
         MeosContracts memory meos = newContract.getMeosSCByAgent(_agent,_branchId);
         address[] memory meosAdds= new address[](7);
         meosAdds[0] = meos.StaffMeosSC;
@@ -165,9 +200,35 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function getAllDeployedContracts() external view returns (address[] memory) {
         return deployedContracts;
     }
-    function upgradeBeacon(
-        address _agent,
-        uint _branchId,
+
+    function setAdminMeos(address admin, bool isAdmin) external onlyOwner {
+        require(admin != address(0), "Invalid address");
+        isAdminMeos[admin] = isAdmin;
+    }    
+
+    // Hàm khởi tạo beacons (gọi 1 lần sau deploy)
+    function initBeacons(
+        address _StaffMeosSC,
+        address _NetCafeUserIMP,
+        address _NetCafeSessionIMP,
+        address _NetCafeTopUpIMP,
+        address _NetCafeSpendIMP,
+        address _NetCafeManagementIMP,
+        address _NetCafeStationIMP
+    ) internal {
+        require(address(NetCafeUserBeacon) == address(0), "Already initialized");
+        
+        StaffMeosBeacon       = new UpgradeableBeacon(_StaffMeosSC, address(this));
+        NetCafeUserBeacon     = new UpgradeableBeacon(_NetCafeUserIMP, address(this));
+        NetCafeSessionBeacon  = new UpgradeableBeacon(_NetCafeSessionIMP, address(this));
+        NetCafeTopUpBeacon    = new UpgradeableBeacon(_NetCafeTopUpIMP, address(this));
+        NetCafeSpendBeacon    = new UpgradeableBeacon(_NetCafeSpendIMP, address(this));
+        NetCafeManagementBeacon = new UpgradeableBeacon(_NetCafeManagementIMP, address(this));
+        NetCafeStationBeacon  = new UpgradeableBeacon(_NetCafeStationIMP, address(this));
+    }
+
+    // Upgrade global: 1 lần → tất cả agent được upgrade
+    function upgradeBeaconGlobal(
         address _newImplStaffMeos,
         address _newImplNetCafeUser,
         address _newImplNetCafeSession,
@@ -175,22 +236,61 @@ contract MeosFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address _newImplNetCafeSpend,
         address _newImplNetCafeManagement,
         address _newImplNetCafeStation
+    ) external onlyAdminMeos {
+        if (_newImplStaffMeos != address(0))       StaffMeosBeacon.upgradeTo(_newImplStaffMeos);
+        if (_newImplNetCafeUser != address(0))     NetCafeUserBeacon.upgradeTo(_newImplNetCafeUser);
+        if (_newImplNetCafeSession != address(0))  NetCafeSessionBeacon.upgradeTo(_newImplNetCafeSession);
+        if (_newImplNetCafeTopUp != address(0))    NetCafeTopUpBeacon.upgradeTo(_newImplNetCafeTopUp);
+        if (_newImplNetCafeSpend != address(0))    NetCafeSpendBeacon.upgradeTo(_newImplNetCafeSpend);
+        if (_newImplNetCafeManagement != address(0)) NetCafeManagementBeacon.upgradeTo(_newImplNetCafeManagement);
+        if (_newImplNetCafeStation != address(0))  NetCafeStationBeacon.upgradeTo(_newImplNetCafeStation);
+    }
+    /**
+     * @dev Transfer beacon ownership sang địa chỉ khác nếu cần.
+     *      Hiếm khi dùng — chỉ khi muốn trao quyền upgrade beacon cho bên khác.
+     */
+    function transferBeaconOwnership(address _newOwner) external onlyOwner {
+        require(
+            address(NetCafeUserBeacon) != address(0) &&
+            address(NetCafeSessionBeacon) != address(0) &&
+            address(NetCafeTopUpBeacon) != address(0) &&
+            address(NetCafeSpendBeacon) != address(0) &&
+            address(NetCafeManagementBeacon) != address(0) &&
+            address(NetCafeStationBeacon) != address(0),
+        "Beacon not created");
+        require(_newOwner != address(0), "Invalid address");
+        NetCafeUserBeacon.transferOwnership(_newOwner);
+        NetCafeSessionBeacon.transferOwnership(_newOwner);
+        NetCafeTopUpBeacon.transferOwnership(_newOwner);
+        NetCafeSpendBeacon.transferOwnership(_newOwner);
+        NetCafeManagementBeacon.transferOwnership(_newOwner);
+        NetCafeStationBeacon.transferOwnership(_newOwner);
+    }
+    /**
+     * @dev Lấy địa chỉ implementation hiện tại từ beacon
+     */
+    function currentImplementation() external view returns (address,address,address,address,address,address,address) {
+        require(
+            address(StaffMeosBeacon) != address(0) &&
+            address(NetCafeUserBeacon) != address(0) && 
+            address(NetCafeSessionBeacon) != address(0) &&
+            address(NetCafeTopUpBeacon) != address(0) &&
+            address(NetCafeSpendBeacon) != address(0) &&
+            address(NetCafeManagementBeacon) != address(0) &&
+            address(NetCafeStationBeacon) != address(0), 
+            "Beacon not created"
+        );
+        return (
+            StaffMeosBeacon.implementation(),
+            NetCafeUserBeacon.implementation(),
+            NetCafeSessionBeacon.implementation(),
+            NetCafeTopUpBeacon.implementation(),
+            NetCafeSpendBeacon.implementation(),
+            NetCafeManagementBeacon.implementation(),
+            NetCafeStationBeacon.implementation()
+        );
+    }
 
-    ) external onlyOwner {
-        address agentMeos = agentMeosContracts[_agent][_branchId];
-        IAgentMeos(agentMeos).upgradeBeacon(
-            _newImplStaffMeos,
-            _newImplNetCafeUser,
-            _newImplNetCafeSession,
-            _newImplNetCafeTopUp,
-            _newImplNetCafeSpend,
-            _newImplNetCafeManagement,
-            _newImplNetCafeStation
-        );}
-    function setAdminMeos(address admin, bool isAdmin) external onlyOwner {
-        require(admin != address(0), "Invalid address");
-        isAdminMeos[admin] = isAdmin;
-    }    
 }
 
 

@@ -41,10 +41,10 @@ contract AgentIQR is OwnableUpgradeable {
     constructor(
         address _agent,
         address _enhancedAgent,
-        address _MANAGEMENTIMP,
-        address _ORDERIMP,
-        address _REPORTIMP,
-        address _TIMEKEEPINGIMP,
+        address _MANAGEMENT_Beacon,
+        address _ORDER_Beacon,
+        address _REPORT_Beacon,
+        address _TIMEKEEPING_Beacon,
         address _revenueManager,
         address _StaffAgentStore,
         // address _POINTSIMP,
@@ -55,7 +55,7 @@ contract AgentIQR is OwnableUpgradeable {
         _transferOwnership(_agent);
         enhancedAgent = _enhancedAgent;
         revenueManager = _revenueManager;
-        initializeIQRSCS(_agent,_MANAGEMENTIMP,_ORDERIMP,_REPORTIMP,_TIMEKEEPINGIMP,_StaffAgentStore,_branchId);
+        initializeIQRSCS(_agent,_MANAGEMENT_Beacon,_ORDER_Beacon,_REPORT_Beacon,_TIMEKEEPING_Beacon,_StaffAgentStore,_branchId);
         // ORDER = _ORDER;
         iqrFactory = msg.sender;
         branchId = _branchId;
@@ -75,105 +75,70 @@ contract AgentIQR is OwnableUpgradeable {
         _;
     }
 
-    function upgradeBeacon(
-        address _newImplManagement,
-        address _newImplOrder,
-        address _newImplReport,
-        address _newImplTimekeeping
-    ) external onlyOwner {
+    // function upgradeBeacon(
+    //     address _newImplManagement,
+    //     address _newImplOrder,
+    //     address _newImplReport,
+    //     address _newImplTimekeeping
+    // ) external onlyOwner {
         
-        if(_newImplManagement != address(0)){
-            require(address(ManagementBeacon) != address(0), "Beacon not created yet");
-            address oldImplManagement = ManagementBeacon.implementation();
-            ManagementBeacon.upgradeTo(_newImplManagement);
-            emit BeaconUpgraded(address(ManagementBeacon), oldImplManagement, _newImplManagement, block.timestamp);
-        }
-        if(_newImplOrder != address(0)){
-            require(address(OrderBeacon) != address(0), "Beacon not created yet");
-            address oldImplOrder = OrderBeacon.implementation();
-            OrderBeacon.upgradeTo(_newImplOrder);
-            emit BeaconUpgraded(address(OrderBeacon), oldImplOrder, _newImplOrder, block.timestamp);
-        }
-        if(_newImplReport != address(0)){
-            require(address(ReportBeacon) != address(0), "Beacon not created yet");
-            address oldImplReport = ReportBeacon.implementation();
-            ReportBeacon.upgradeTo(_newImplReport);
-            emit BeaconUpgraded(address(ReportBeacon), oldImplReport, _newImplReport, block.timestamp);
-        }
-        if(_newImplTimekeeping != address(0)){
-            require(address(TimekeepingBeacon) != address(0), "Beacon not created yet");
-            address oldImplTimekeeping = TimekeepingBeacon.implementation();
-            TimekeepingBeacon.upgradeTo(_newImplTimekeeping);
-            emit BeaconUpgraded(address(TimekeepingBeacon), oldImplTimekeeping, _newImplTimekeeping, block.timestamp);
-        }
+    //     if(_newImplManagement != address(0)){
+    //         require(address(ManagementBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplManagement = ManagementBeacon.implementation();
+    //         ManagementBeacon.upgradeTo(_newImplManagement);
+    //         emit BeaconUpgraded(address(ManagementBeacon), oldImplManagement, _newImplManagement, block.timestamp);
+    //     }
+    //     if(_newImplOrder != address(0)){
+    //         require(address(OrderBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplOrder = OrderBeacon.implementation();
+    //         OrderBeacon.upgradeTo(_newImplOrder);
+    //         emit BeaconUpgraded(address(OrderBeacon), oldImplOrder, _newImplOrder, block.timestamp);
+    //     }
+    //     if(_newImplReport != address(0)){
+    //         require(address(ReportBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplReport = ReportBeacon.implementation();
+    //         ReportBeacon.upgradeTo(_newImplReport);
+    //         emit BeaconUpgraded(address(ReportBeacon), oldImplReport, _newImplReport, block.timestamp);
+    //     }
+    //     if(_newImplTimekeeping != address(0)){
+    //         require(address(TimekeepingBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplTimekeeping = TimekeepingBeacon.implementation();
+    //         TimekeepingBeacon.upgradeTo(_newImplTimekeeping);
+    //         emit BeaconUpgraded(address(TimekeepingBeacon), oldImplTimekeeping, _newImplTimekeeping, block.timestamp);
+    //     }
 
-    }
-    /**
-     * @dev Transfer beacon ownership sang địa chỉ khác nếu cần.
-     *      Hiếm khi dùng — chỉ khi muốn trao quyền upgrade beacon cho bên khác.
-     */
-    function transferBeaconOwnership(address _newOwner) external onlyOwner {
-        require(
-            address(ManagementBeacon) != address(0) &&
-            address(OrderBeacon) != address(0) &&
-            address(ReportBeacon) != address(0) &&
-            address(TimekeepingBeacon) != address(0), 
-        "Beacon not created");
-        require(_newOwner != address(0), "Invalid address");
-        ManagementBeacon.transferOwnership(_newOwner);
-        OrderBeacon.transferOwnership(_newOwner);
-        ReportBeacon.transferOwnership(_newOwner);
-        TimekeepingBeacon.transferOwnership(_newOwner);
-    }
-    /**
-     * @dev Lấy địa chỉ implementation hiện tại từ beacon
-     */
-    function currentImplementation() external view returns (address,address,address,address) {
-        require(
-            address(ManagementBeacon) != address(0) && 
-            address(OrderBeacon) != address(0) &&
-            address(ReportBeacon) != address(0) &&
-            address(TimekeepingBeacon) != address(0), 
-            "Beacon not created"
-        );
-        return (
-            ManagementBeacon.implementation(),
-            OrderBeacon.implementation(),
-            ReportBeacon.implementation(),
-            TimekeepingBeacon.implementation()
-        );
-    }
+    // }
     function initializeIQRSCS(
         address _agent,
-        address MANAGEMENT_IMP,
-        address ORDER_IMP,
-        address REPORT_IMP,
-        address TIMEKEEPING_IMP,
+        address MANAGEMENT_Beacon,
+        address ORDER_Beacon,
+        address REPORT_Beacon,
+        address TIMEKEEPING_Beacon,
         address _StaffAgentStore,
         uint _branchId
         ) internal {
         require(address(ManagementBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        ManagementBeacon = new UpgradeableBeacon(MANAGEMENT_IMP, address(this));
+        ManagementBeacon = UpgradeableBeacon(MANAGEMENT_Beacon);
 
         BeaconProxy MANAGEMENT_PROXY = new BeaconProxy(
             address(ManagementBeacon),
             abi.encodeWithSelector(IMANAGEMENT.initialize.selector)
         );
         require(address(OrderBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        OrderBeacon = new UpgradeableBeacon(ORDER_IMP, address(this));
+        OrderBeacon = UpgradeableBeacon(ORDER_Beacon);
         BeaconProxy ORDER_PROXY = new BeaconProxy(
             address(OrderBeacon),
             abi.encodeWithSelector(IORDER.initialize.selector)
         );
         require(address(ReportBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        ReportBeacon = new UpgradeableBeacon(REPORT_IMP, address(this));
+        ReportBeacon = UpgradeableBeacon(REPORT_Beacon);
         BeaconProxy REPORT_PROXY = new BeaconProxy(
             address(ReportBeacon),
             abi.encodeWithSelector(IREPORT.initialize.selector,
             address(MANAGEMENT_PROXY))
         );
         require(address(TimekeepingBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        TimekeepingBeacon = new UpgradeableBeacon(TIMEKEEPING_IMP, address(this));
+        TimekeepingBeacon = UpgradeableBeacon(TIMEKEEPING_Beacon);
         BeaconProxy TIMEKEEPING_PROXY = new BeaconProxy(
             address(TimekeepingBeacon), 
             abi.encodeWithSelector(ITIMEKEEPING.initialize.selector, 

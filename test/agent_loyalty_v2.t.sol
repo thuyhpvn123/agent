@@ -1258,7 +1258,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         _createStaff(management,staff1Shifts,staff1Roles,staff1);
         _createDishes();
         _createTables();
-        // _order(Points );
+        _order(Points );
         //Meos
         address meosAgentAdd = meosFactory.getAgentMEOSContract(agent2,branchIds2[0]);
         MeosContracts memory meoos = enhanced.getMeosSCByAgentFromFactory(agent2,branchIds2[0]);
@@ -1716,7 +1716,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         // string memory discountCode = "";
         // uint tip = 0;
         // Payment memory payment = order.getTablePayment(1);
-        (bytes32 sessionIdT1, ) = order.CreateSessionForTable(2, 3, bytes32(0));
+        (bytes32 sessionIdT1, ) = order.CreateSessionForTable(2, bytes32(0));
 
         MakeOrderParams memory params1T1 = MakeOrderParams({
             table: 2,
@@ -1870,8 +1870,8 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         bytesCodeCall = abi.encodeCall(
             iqrFactory.setIQRSC,
             (
-                0x8e76E828d54D4c006910135fc3106D38e8ac9Ee7,
-                0x0000000000000000000000000000000000000000,
+                0xd44b65c34533A0A040b03fbadb6b4eEb92BeEa18,
+                0x89349b897f866434456EA645851B78E52420d9DA,
                 0x0000000000000000000000000000000000000000,
                 0x0000000000000000000000000000000000000000,
                 0x0000000000000000000000000000000000000000,
@@ -1953,16 +1953,16 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         bytesCodeCall = abi.encodeCall(
             meosFactory.setMeos,
             (
-            0x47aed34E1F61eB68bB0A923aA54cCa19DBee40B7,
-            0x6ee8C04DDA7b0CB0DeB944cAaf485FaC57AEC74e,
-            0x082a9CF7d2b56111b7F230BD4efF43Fd28F78064,
-            0xE766CACa8E1bA5340e264f21374cD64831002058,
-            0xBa1e583eA3a3d0dD5590E4c5C76d9Ed818121960,
-            0x2e5288Bc460E2B9fc13e50FcCc4f7E076B75974F,
-            0xBD9B7c0E5256677f336c898ca3Fc43C06bC6398f,
-            0x1510151015101510151015101510151015101510,
-            0x1510151015101510151015101510151015101510,
-            0x1510151015101510151015101510151015101510
+            0x0000000000000000000000000000000000000000,
+            0x9fbFAA64bAA623ED503441470212294376e78bf7,
+            0x15466DD930437CdaeBf526E3326E2F91E01954d6,
+            0x73252975abb27Dc6964771E5a9Da4F85a078Fd22,
+            0xa8F3A9d032A43A564Ba07a4fe9645335F93b7b11,
+            0x3aF95dC5930a05Cc1aEd01096800CA8b77F96503,
+            0xDd84c31B2585d90A3bf29c1Bc2309db9Af45EA27,
+            0x0000000000000000000000000000000000000000,
+            0x0000000000000000000000000000000000000000,
+            0x0000000000000000000000000000000000000000
             )
         );
         console.log("enhanced: setMeos:");
@@ -2368,6 +2368,17 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     console.log(
         "-----------------------------------------------------------------------------"
     );
+    //user_IMP
+    bytesCodeCall = abi.encodeCall(
+        user_IMP.staffContract,
+        (
+        ));
+    console.log("user_IMP staffContract:");
+    console.logBytes(bytesCodeCall);
+    console.log(
+        "-----------------------------------------------------------------------------"
+    );
+
     // bytesCodeCall = abi.encodeCall(
     //     meosFactory.setAdminMeos,
     //     (

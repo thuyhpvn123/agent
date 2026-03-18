@@ -11,8 +11,7 @@ import "../contracts/net_repo/contracts/v2/NetCafeSpendV2.sol";
 import "../contracts/net_repo/contracts/v2/interfaces/IStaffManagement.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../contracts/interfaces/IMeos.sol";
-import  "../contracts/ManagementDemo.sol";
-
+import "../contracts/ManagementDemo.sol";
 
 contract NetCafeV2FullFlowTest is Test {
     Management public StaffMeosSC;
@@ -33,7 +32,7 @@ contract NetCafeV2FullFlowTest is Test {
     // address finance;
     address userWallet;
     address sessionWallet;
-    address public DeployerMeos ;
+    address public DeployerMeos;
     bytes32 constant POLICY_ID = keccak256("POLICY_BASIC");
     bytes32 constant GROUP_ID = keccak256("GROUP_BASIC");
     bytes32 constant PC_ID = keccak256("PC_01");
@@ -79,23 +78,29 @@ contract NetCafeV2FullFlowTest is Test {
         //     )
         // );
         session = NetCafeSessionV2(address(session_IMP));
+        user.setSessionContract(address(session_IMP));
 
         topup_IMP = new NetCafeTopUpV2();
         topup_IMP.initialize(address(StaffMeosSC_IMP), address(user_IMP));
         // ERC1967Proxy NetCafeTopUp_PROXY = new ERC1967Proxy(
-        //     address(topup_IMP), 
-        //     abi.encodeWithSelector(INetCafeTopUp.initialize.selector, 
+        //     address(topup_IMP),
+        //     abi.encodeWithSelector(INetCafeTopUp.initialize.selector,
         //     address(session_IMP),
         //     address(user_IMP)
         //     )
         // );
         topup = NetCafeTopUpV2(address(topup_IMP));
+        topup.setSessionContract(address(session_IMP));
 
         spend_IMP = new NetCafeSpendV2();
-        spend_IMP.initialize(address(StaffMeosSC_IMP), address(user_IMP), address(session_IMP));
+        spend_IMP.initialize(
+            address(StaffMeosSC_IMP),
+            address(user_IMP),
+            address(session_IMP)
+        );
         // ERC1967Proxy NetCafeSpend_PROXY = new ERC1967Proxy(
-        //     address(spend_IMP), 
-        //     abi.encodeWithSelector(INetCafeSpend.initialize.selector, 
+        //     address(spend_IMP),
+        //     abi.encodeWithSelector(INetCafeSpend.initialize.selector,
         //     address(StaffMeosSC_PROXY),
         //     address(NetCafeUser_PROXY),
         //     address(NetCafeSession_PROXY)
@@ -106,17 +111,22 @@ contract NetCafeV2FullFlowTest is Test {
         management_IMP = new NetCafeManagementV2();
         management_IMP.initialize(address(StaffMeosSC_IMP));
         // ERC1967Proxy NetCafeManagement_PROXY = new ERC1967Proxy(
-        //     address(management_IMP), 
-        //     abi.encodeWithSelector(INetCafeManagement.initialize.selector, 
+        //     address(management_IMP),
+        //     abi.encodeWithSelector(INetCafeManagement.initialize.selector,
         //     address(StaffMeosSC_PROXY))
         // );
         managementMeos = NetCafeManagementV2(address(management_IMP));
 
         station_IMP = new NetCafeStationV2();
-        station_IMP.initialize(address(StaffMeosSC_IMP), address(user_IMP), address(session_IMP), address(management_IMP));
+        station_IMP.initialize(
+            address(StaffMeosSC_IMP),
+            address(user_IMP),
+            address(session_IMP),
+            address(management_IMP)
+        );
         // ERC1967Proxy NetCafeStation_PROXY = new ERC1967Proxy(
-        //     address(station_IMP), 
-        //     abi.encodeWithSelector(INetCafeStation.initialize.selector, 
+        //     address(station_IMP),
+        //     abi.encodeWithSelector(INetCafeStation.initialize.selector,
         //     address(StaffMeosSC_PROXY),
         //     address(NetCafeUser_PROXY),
         //     address(NetCafeSession_PROXY),
@@ -132,110 +142,129 @@ contract NetCafeV2FullFlowTest is Test {
         vm.stopPrank();
 
         SetUpStaffMeos();
-
     }
-    function SetUpStaffMeos()public{
+    function SetUpStaffMeos() public {
         bytes32 ROLE_ADMIN = keccak256("ROLE_ADMIN");
         bytes32 ROLE_STAFF = keccak256("ROLE_STAFF");
 
-        vm.warp(1759724234);//11h17 -7/10/2025
+        vm.warp(1759724234); //11h17 -7/10/2025
         // vm.startPrank(DeployerMeos);
         // bytes32 role = StaffMeosSC.DEFAULT_ADMIN_ROLE();
         // StaffMeosSC.grantRole(role,admin);
         vm.startPrank(DeployerMeos);
         // StaffMeosSC.grantRole(ROLE_ADMIN,admin);
-        //CreatePosition
-        STAFF_ROLE[] memory staff4Roles = new STAFF_ROLE[](1);
+        //CreatePositionầ
+        STAFF_ROLE[] memory staff4Roles = new STAFF_ROLE[](2);
         staff4Roles[0] = STAFF_ROLE.FINANCE;
+        staff4Roles[1] = STAFF_ROLE.PC_MANAGE;
 
-        StaffMeosSC.CreatePosition("nv trong tiem net",staff4Roles);
+        StaffMeosSC.CreatePosition("nv trong tiem net", staff4Roles);
         //CreateWorkingShift
-        StaffMeosSC.CreateWorkingShift("ca sang",28800,43200); ////số giây tính từ 0h ngày hôm đó. vd 08:00 là 8*3600=28800
-        StaffMeosSC.CreateWorkingShift("ca chieu",46800,61200); //tu 13:00 den 17:00
+        StaffMeosSC.CreateWorkingShift("ca sang", 28800, 43200); ////số giây tính từ 0h ngày hôm đó. vd 08:00 là 8*3600=28800
+        StaffMeosSC.CreateWorkingShift("ca chieu", 46800, 61200); //tu 13:00 den 17:00
 
         WorkingShift[] memory shifts = StaffMeosSC.getWorkingShifts();
-        assertEq(shifts[0].title,"ca sang","working shift title should equal");
+        assertEq(
+            shifts[0].title,
+            "ca sang",
+            "working shift title should equal"
+        );
         WorkingShift[] memory staff4Shifts = new WorkingShift[](2);
         staff4Shifts[0] = shifts[0];
         staff4Shifts[1] = shifts[1];
 
         Staff memory staff = Staff({
             wallet: staff4,
-            name:"thuy",
-            code:"NV1",
-            phone:"0913088965",
-            addr:"phu nhuan",
+            name: "thuy",
+            code: "NV1",
+            phone: "0913088965",
+            addr: "phu nhuan",
             position: "nv trong tiem net",
-            role:ROLE.STAFF,
+            role: ROLE.STAFF,
             active: true,
             linkImgSelfie: "linkImgSelfie",
-            linkImgPortrait:"linkImgPortrait",
-            shifts:staff4Shifts,
+            linkImgPortrait: "linkImgPortrait",
+            shifts: staff4Shifts,
             roles: staff4Roles
-
         });
         StaffMeosSC.CreateStaff(staff);
 
         staff = Staff({
             wallet: staff5,
-            name:"han",
-            code:"NV2",
-            phone:"0914526387",
-            addr:"quan 7",
+            name: "han",
+            code: "NV2",
+            phone: "0914526387",
+            addr: "quan 7",
             position: "nv trong tiem net",
-            role:ROLE.STAFF,
+            role: ROLE.STAFF,
             active: true,
             linkImgSelfie: "linkImgSelfie",
-            linkImgPortrait:"linkImgPortrait",
-            shifts:staff4Shifts,
+            linkImgPortrait: "linkImgPortrait",
+            shifts: staff4Shifts,
             roles: staff4Roles
         });
         StaffMeosSC.CreateStaff(staff);
 
-        (Staff[] memory staffs,uint totalCount) = StaffMeosSC.GetStaffsPagination(0,100);
+        (Staff[] memory staffs, uint totalCount) = StaffMeosSC
+            .GetStaffsPagination(0, 100);
 
-        assertEq(staffs.length,2,"should be equal");
+        assertEq(staffs.length, 2, "should be equal");
         Staff memory staffInfo = StaffMeosSC.GetStaffInfo(staff4);
-        assertEq(staffInfo.name,"thuy","should be equal");
-        assertEq(staffInfo.phone,"0913088965","should be equal");
-        StaffMeosSC.grantRole(ROLE_STAFF,staff4);
-        StaffMeosSC.UpdateStaffInfo(staff4,"thanh thuy","NV1","1111111111","phu nhuan",staff4Roles,staff4Shifts,"linkImgSelfie","linkImgPortrait","nv trong tiem net",true);
+        assertEq(staffInfo.name, "thuy", "should be equal");
+        assertEq(staffInfo.phone, "0913088965", "should be equal");
+        StaffMeosSC.grantRole(ROLE_STAFF, staff4);
+        assertTrue(
+            StaffMeosSC.checkRole(STAFF_ROLE.PC_MANAGE, staff4),
+            "staff4 should have PC_MANAGE role"
+        );
+        StaffMeosSC.UpdateStaffInfo(
+            staff4,
+            "thanh thuy",
+            "NV1",
+            "1111111111",
+            "phu nhuan",
+            staff4Roles,
+            staff4Shifts,
+            "linkImgSelfie",
+            "linkImgPortrait",
+            "nv trong tiem net",
+            true
+        );
         staffInfo = StaffMeosSC.GetStaffInfo(staff4);
-        assertEq(staffInfo.name,"thanh thuy","should be equal");
-        assertEq(staffInfo.phone,"1111111111","should be equal");
+        assertEq(staffInfo.name, "thanh thuy", "should be equal");
+        assertEq(staffInfo.phone, "1111111111", "should be equal");
         bool kq = StaffMeosSC.isStaff(staff4);
-        assertEq(kq,true,"should be equal"); 
-        (staffs,totalCount) = StaffMeosSC.GetStaffsPagination(0,100);
-        assertEq(staffs[0].name,"han","should be equal");
-        assertEq(staffs[0].phone,"0914526387","should be equal");
+        assertEq(kq, true, "should be equal");
+        (staffs, totalCount) = StaffMeosSC.GetStaffsPagination(0, 100);
+        assertEq(staffs[0].name, "han", "should be equal");
+        assertEq(staffs[0].phone, "0914526387", "should be equal");
 
-        StaffMeosSC.grantRole(ROLE_ADMIN,staff5);
-        
+        StaffMeosSC.grantRole(ROLE_ADMIN, staff5);
+
         vm.stopPrank();
         vm.prank(staff5);
         staff = Staff({
             wallet: staff6,
-            name:"han",
-            code:"NV3",
-            phone:"11111111",
-            addr:"quan 7",
+            name: "han",
+            code: "NV3",
+            phone: "11111111",
+            addr: "quan 7",
             position: "nv trong tiem net",
-            role:ROLE.STAFF,
+            role: ROLE.STAFF,
             active: true,
             linkImgSelfie: "linkImgSelfie",
-            linkImgPortrait:"linkImgPortrait",
-            shifts:staff4Shifts,
+            linkImgPortrait: "linkImgPortrait",
+            shifts: staff4Shifts,
             roles: staff4Roles
         });
         StaffMeosSC.CreateStaff(staff);
-        StaffMeosSC.GetStaffsPagination(0,10);
+        StaffMeosSC.GetStaffsPagination(0, 10);
         vm.prank(staff5);
         StaffMeosSC.removeStaff(staff6);
-        
     }
 
     function test_FullFlowV2_Net() public {
-        // Finance cau hinh: gia, may, group va dang ky user
+        // Finance cau hinh: gia, may, group, payment method va dang ky user
         vm.startPrank(staff4);
         managementMeos.addPricePolicy(POLICY_ID, 10, "Basic");
         managementMeos.addStation(
@@ -254,7 +283,14 @@ contract NetCafeV2FullFlowTest is Test {
         bytes32[] memory pcs = new bytes32[](1);
         pcs[0] = PC_ID;
 
-        managementMeos.addGroup(GROUP_ID, "Group A", POLICY_ID, pcs, "Basic group");
+        managementMeos.addGroup(
+            GROUP_ID,
+            "Group A",
+            POLICY_ID,
+            pcs,
+            "Basic group"
+        );
+        topup.setPaymentConfig(true, true);
         for (uint256 i = 0; i < pcs.length; i++) {
             console.log("pcs[", i, "]");
             console.logBytes32(pcs[i]);
@@ -284,21 +320,34 @@ contract NetCafeV2FullFlowTest is Test {
 
         vm.prank(userWallet);
         user.loginUser(userWallet, "PC 01");
+
+        // Station lay trang thai tu session + user
+        vm.prank(sessionWallet);
+        station.setStatus(sessionWallet, PC_ID);
+
         // User gui yeu cau nap
         vm.prank(userWallet);
-        topup.requestTopUp(userWallet, 200, NetCafeTopUpV2.PaymentMethod.CASH);
+        topup.requestTopUp(
+            userWallet,
+            200,
+            NetCafeTopUpV2.PaymentMethod.CASH,
+            sessionWallet,
+            SESSION_KEY,
+            PC_ID
+        );
 
         // Finance duyet nap
         vm.prank(staff4);
         topup.approveTopUp(1);
 
         // So du tang len
-        (, , , uint256 balanceAfterTopup) = user.getUserStatus(userWallet);
+        (, , , uint256 balanceAfterTopup) = user.getUserStatus(
+            userWallet,
+            sessionWallet,
+            SESSION_KEY,
+            PC_ID
+        );
         assertEq(balanceAfterTopup, 1200);
-
-        // Station lay trang thai tu session + user
-        vm.prank(sessionWallet);
-        station.setStatus(sessionWallet, PC_ID);
 
         // Gia lap 2 phut choi
         vm.warp(1759724234 + 2 minutes);
@@ -311,11 +360,9 @@ contract NetCafeV2FullFlowTest is Test {
 
         // Session dong, user bi logout
         assertFalse(session.isSessionActive(sessionWallet));
-        (, bool online, , uint256 balanceAfterSpend) = user.getUserStatus(
-            userWallet
-        );
-        assertFalse(online);
-        assertEq(balanceAfterSpend, 1180);
+        assertFalse(user.isOnline(userWallet));
+        vm.prank(userWallet);
+        assertEq(user.getMyBalanceVND(), 1180);
 
         // Lich su chi tieu duoc ghi lai
         (

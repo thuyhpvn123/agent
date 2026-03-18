@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {NetCafeStaffUpgradeable} from "./NetCafeStaffUpgradeable.sol";
+import {INetCafeStationV2} from "./interfaces/INetCafeStation.sol";
+
+// interface IAuditLog {
+//     function writeLog(
+//         uint256 branchId,
+//         address actor,
+//         string calldata actorName,
+//         string calldata action,
+//         bytes32 targetId,
+//         string calldata detail
+//     ) external returns (uint256);
+// }
 
 contract NetCafeManagementV2 is
     OwnableUpgradeable,
@@ -39,6 +51,11 @@ contract NetCafeManagementV2 is
         bool active;
         bool exists;
     }
+    struct StationWithOnline {
+        StationMeta meta;
+        bool online;
+        bool maintenance;
+    }
 
     /* =======================
            STORAGE
@@ -63,22 +80,63 @@ contract NetCafeManagementV2 is
     event GroupUpdated(bytes32 indexed id, string name);
     event StationAssigned(bytes32 indexed pcId, bytes32 indexed groupId);
     event StationRemoved(bytes32 indexed pcId, bytes32 indexed groupId);
+    event StationAdded(bytes32 indexed pcId, string name, bytes32 groupId);
 
     event PricePolicyAdded(bytes32 indexed id, uint256 pricePerMinute);
     event PricePolicyUpdated(bytes32 indexed id, uint256 pricePerMinute);
     // Thêm vào phần EVENTS
     event PricePolicyStatusChanged(bytes32 indexed id, bool active);
     event PricePolicyDeleted(bytes32 indexed id);
+    INetCafeStationV2 public stationContract;
 
-    function initialize(address _staffContract) public initializer {
+    /* =======================
+           INIT
+    ======================= */
+    function initialize(
+        address _staffContract
+        // address _auditLogContract
+    ) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         __NetCafeStaff_init(_staffContract);
+        // auditLog = IAuditLog(_auditLogContract);
     }
 
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
+
+    /* =======================
+        INTERNAL: WRITE LOG
+        - lấy branchId + actorName từ staffContract qua msg.sender
+    ======================= */
+    // function _log(
+    //     string memory action,
+    //     bytes32 targetId,
+    //     string memory detail
+    // ) internal {
+    //     if (address(auditLog) == address(0)) return;
+
+    //     try staffContract.GetStaffInfo(msg.sender) returns (
+    //         string memory name,
+    //         string memory position,
+    //         uint256 branchId
+    //     ) {
+    //         string memory actorName = string(
+    //             abi.encodePacked(position, ": ", name)
+    //         );
+    //         try
+    //             auditLog.writeLog(
+    //                 branchId,
+    //                 msg.sender,
+    //                 actorName,
+    //                 action,
+    //                 targetId,
+    //                 detail
+    //             )
+    //         {} catch {}
+    //     } catch {}
+    // }
 
     /* =======================
         PRICE POLICY
@@ -87,7 +145,7 @@ contract NetCafeManagementV2 is
         bytes32 id,
         uint256 pricePerMinute,
         string calldata namePrice
-    ) external {
+    ) external onlyPcManage {
         require(id != bytes32(0), "Invalid id");
         require(!pricePolicies[id].exists, "Policy exists");
         require(pricePerMinute > 0, "Invalid price");
@@ -104,7 +162,10 @@ contract NetCafeManagementV2 is
         emit PricePolicyAdded(id, pricePerMinute);
     }
 
-    function updatePricePolicy(bytes32 id, uint256 pricePerMinute) external {
+    function updatePricePolicy(
+        bytes32 id,
+        uint256 pricePerMinute
+    ) external onlyPcManage {
         require(pricePolicies[id].exists, "Policy not found");
 
         pricePolicies[id].pricePerMinute = pricePerMinute;
@@ -129,7 +190,7 @@ contract NetCafeManagementV2 is
         bytes32 pricePolicyId,
         bytes32[] calldata stationList,
         string calldata description
-    ) external {
+    ) external onlyPcManage {
         require(groupId != bytes32(0), "Invalid group id");
         require(!groups[groupId].exists, "Group exists");
         require(pricePolicies[pricePolicyId].exists, "Policy not found");
@@ -161,7 +222,7 @@ contract NetCafeManagementV2 is
         bytes32 pricePolicyId,
         bytes32[] calldata newStationList,
         string calldata description
-    ) external {
+    ) external onlyPcManage {
         require(groups[groupId].exists, "Group not found");
         require(pricePolicies[pricePolicyId].exists, "Policy not found");
 
@@ -235,7 +296,7 @@ contract NetCafeManagementV2 is
         string calldata ipAddress,
         string calldata macAddress,
         string calldata configuration
-    ) external {
+    ) external onlyPcManage {
         require(pcId != bytes32(0), "Invalid pcId");
         require(!stations[pcId].exists, "Station exists");
 
@@ -260,6 +321,7 @@ contract NetCafeManagementV2 is
         if (groupId != bytes32(0)) {
             _assignStationToGroup(pcId, groupId);
         }
+        emit StationAdded(pcId, name, groupId);
     }
     function getStationMeta(
         bytes32 pcId
@@ -392,7 +454,10 @@ contract NetCafeManagementV2 is
 
         return groups[gid].price;
     }
-    function setActivePricePolicy(bytes32 id, bool active) external {
+    function setActivePricePolicy(
+        bytes32 id,
+        bool active
+    ) external onlyPcManage {
         require(pricePolicies[id].exists, "Policy not found");
 
         pricePolicies[id].active = active;
@@ -426,7 +491,7 @@ contract NetCafeManagementV2 is
     }
 
     // Hàm xóa price policy
-    function deletePricePolicy(bytes32 id) external {
+    function deletePricePolicy(bytes32 id) external onlyPcManage {
         require(pricePolicies[id].exists, "Policy not found");
 
         // Kiểm tra xem policy có đang được sử dụng không
@@ -455,6 +520,63 @@ contract NetCafeManagementV2 is
 
         emit PricePolicyDeleted(id);
     }
+    /* =======================
+       FULL INFO GETTERS
+======================= */
+    function getStationsPaged(
+        uint256 offset,
+        uint256 limit
+    ) external view returns (StationWithOnline[] memory list, uint256 total) {
+        total = stationIds.length;
+        if (offset >= total) return (new StationWithOnline[](0), total);
+        uint256 end = offset + limit > total ? total : offset + limit;
+        bool hasStationContract = address(stationContract) != address(0) &&
+            address(stationContract).code.length > 0;
 
-    uint256[50] private __gap;
+        list = new StationWithOnline[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            bytes32 pcId = stationIds[i];
+            list[i - offset] = StationWithOnline({
+                meta: stations[pcId],
+                online: hasStationContract
+                    ? stationContract.isStationOnline(pcId)
+                    : false,
+                maintenance: hasStationContract
+                    ? stationContract.isStationMaintenance(pcId)
+                    : false
+            });
+        }
+    }
+
+    function getGroupsPaged(
+        uint256 offset,
+        uint256 limit
+    ) external view returns (Group[] memory list, uint256 total) {
+        total = groupIds.length;
+        if (offset >= total) return (new Group[](0), total);
+        uint256 end = offset + limit > total ? total : offset + limit;
+        list = new Group[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            list[i - offset] = groups[groupIds[i]];
+        }
+    }
+
+    function getPricePoliciesPaged(
+        uint256 offset,
+        uint256 limit
+    ) external view returns (PricePolicy[] memory list, uint256 total) {
+        total = pricePolicyIds.length;
+        if (offset >= total) return (new PricePolicy[](0), total);
+        uint256 end = offset + limit > total ? total : offset + limit;
+        list = new PricePolicy[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            list[i - offset] = pricePolicies[pricePolicyIds[i]];
+        }
+    }
+    function setStationContract(address _stationContract) external {
+        require(_stationContract != address(0), "Invalid address");
+        stationContract = INetCafeStationV2(_stationContract);
+    }
+
+    uint256[49] private __gap;
 }

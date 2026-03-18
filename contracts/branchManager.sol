@@ -1249,7 +1249,7 @@ contract BranchManagement is
         uint256 count = 0;
         for (uint256 i = 0; i < managerAddresses.length; i++) {
             ManagerInfo memory manager = managers[managerAddresses[i]];
-            if (manager.active && manager.isCoOwner && manager.hasFullAccess) {
+            if (manager.active && manager.isCoOwner && manager.hasFullAccess && manager.canProposeAndVote) {
                 count++;
             }
         }
@@ -1265,7 +1265,7 @@ contract BranchManagement is
         for (uint256 i = 0; i < managerAddresses.length; i++) {
             ManagerInfo memory manager = managers[managerAddresses[i]];
             if (manager.active && manager.isCoOwner && 
-                _isManagerOfBranch(managerAddresses[i], branchId)) {
+                _isManagerOfBranch(managerAddresses[i], branchId)&& manager.canProposeAndVote) {
                 count++;
             }
         }

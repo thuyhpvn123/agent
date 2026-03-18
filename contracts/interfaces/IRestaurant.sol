@@ -804,9 +804,9 @@ struct OptionSelected {
         bytes32 sessionId;
         uint256 tableId;
         address customer;
-        CustomerType cType; 
+        // CustomerType cType; 
         SESSION_STATUS status;
-        uint256 seatUsed; 
+        // uint256 seatUsed; 
         address creator;
         SessionType typeSession;
         bytes32 reservationId;
@@ -869,4 +869,3 @@ struct OptionSelected {
     SelectedOption[][] dishSelectedOptions;
     PaymentType paymentType;
 }
-

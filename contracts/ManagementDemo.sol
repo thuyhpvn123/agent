@@ -13,6 +13,7 @@ import "./interfaces/IPoint.sol";
 // import "forge-std/console.sol";
 import "./interfaces/IHistoryTracking.sol";
 import "./loyaltyDB.sol";
+// import "./FullDB.sol";
 contract Management is    
    
     Initializable, 
@@ -4420,24 +4421,23 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
     // Added 22/01/2026
     // gộp bàn
     function _updateTableStatusForReservation(
-        // list bàn
         uint256[] memory _numbers, 
         bytes32 sessionId, 
-        uint256 _numPeople, 
+        // uint256 _numPeople, 
         TABLE_STATUS _status
     ) internal {
-        uint256 totalPeople = 0;
-        if (_status != TABLE_STATUS.AVAILABLE) {
-            for (uint i = 0; i < _numbers.length; i++) {
-                totalPeople += mNumberToTable[_numbers[i]].numPeople;
-            }
+        // uint256 totalPeople = 0;
+        // if (_status != TABLE_STATUS.AVAILABLE) {
+        //     for (uint i = 0; i < _numbers.length; i++) {
+        //         totalPeople += mNumberToTable[_numbers[i]].numPeople;
+        //     }
 
-            // Nếu là trạng thái đặt bàn, phải đủ chỗ cho đoàn khách
-            require(_numPeople <= totalPeople, "Not enough storage space");
-        }
+        //     // Nếu là trạng thái đặt bàn, phải đủ chỗ cho đoàn khách
+        //     require(_numPeople <= totalPeople, "Not enough storage space");
+        // }
 
 
-        uint256 remainingPeople = _numPeople;
+        // uint256 remainingPeople = _numPeople;
 
         for (uint i = 0; i < _numbers.length; i++) {
             uint256 tableNum = _numbers[i];
@@ -4447,7 +4447,7 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
             if (_status == TABLE_STATUS.AVAILABLE) {
                 table.status = _status;
                 delete table.sessionIds;
-                table.occupiedSeats = 0;
+                // table.occupiedSeats = 0;
             } else {
                 if(i == 0) 
                 {
@@ -4460,17 +4460,17 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
                     table.parentTableId = _numbers[0];
                     table.status = TABLE_STATUS.MERGED;
                 }
-                if (remainingPeople > 0) {
-                    if (remainingPeople >= table.numPeople) {
-                        table.occupiedSeats = table.numPeople; // Bàn này đầy
-                        remainingPeople -= table.numPeople;
-                    } else {
-                        table.occupiedSeats = remainingPeople; // Bàn này nhận nốt số lẻ
-                        remainingPeople = 0;
-                    }
-                } else {
-                    table.occupiedSeats = 0; 
-                }
+                // if (remainingPeople > 0) {
+                //     if (remainingPeople >= table.numPeople) {
+                //         table.occupiedSeats = table.numPeople; // Bàn này đầy
+                //         remainingPeople -= table.numPeople;
+                //     } else {
+                //         table.occupiedSeats = remainingPeople; // Bàn này nhận nốt số lẻ
+                //         remainingPeople = 0;
+                //     }
+                // } else {
+                //     table.occupiedSeats = 0; 
+                // }
                
             }
             _syncIndividualTable(tableNum);
@@ -4513,7 +4513,8 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
         return false;
     }
 
-    function mergeTables(uint256[] memory _tableNumbers,bytes32 _sessionId,uint256 _numPeople, TABLE_STATUS _status) external onlyOrder {
+    // function mergeTables(uint256[] memory _tableNumbers,bytes32 _sessionId,uint256 _numPeople, TABLE_STATUS _status) external onlyOrder {
+    function mergeTables(uint256[] memory _tableNumbers,bytes32 _sessionId, TABLE_STATUS _status) external onlyOrder {
 
         // require(_tableNumbers.length > 1, "At least two tables are needed to assemble them.");
 
@@ -4521,15 +4522,16 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
         _updateTableStatusForReservation(
             _tableNumbers, 
             _sessionId, 
-            _numPeople, 
+            // _numPeople, 
             _status
         );
 
     }
 
-     function mergeMoreTables(uint256[] memory _tableNumbers, uint256 tableParent,uint256 _numPeople) external onlyOrder {
+    //  function mergeMoreTables(uint256[] memory _tableNumbers, uint256 tableParent,uint256 _numPeople) external onlyOrder {
+     function mergeMoreTables(uint256[] memory _tableNumbers, uint256 tableParent) external onlyOrder {
 
-        uint256 remainingPeople = _numPeople;
+        // uint256 remainingPeople = _numPeople;
          for (uint i = 0; i < _tableNumbers.length; i++) {
             uint256 tableNum = _tableNumbers[i];
             Table storage table = mNumberToTable[tableNum]; 
@@ -4539,17 +4541,17 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
             table.status = TABLE_STATUS.MERGED;
             table.parentTableId = tableParent;
 
-            if (remainingPeople > 0) {
-                if (remainingPeople >= table.numPeople) {
-                    table.occupiedSeats = table.numPeople;
-                    remainingPeople -= table.numPeople;
-                } else {
-                    table.occupiedSeats = remainingPeople; 
-                    remainingPeople = 0;
-                }
-            } else {
-                table.occupiedSeats = 0; 
-            }
+            // if (remainingPeople > 0) {
+            //     if (remainingPeople >= table.numPeople) {
+            //         table.occupiedSeats = table.numPeople;
+            //         remainingPeople -= table.numPeople;
+            //     } else {
+            //         table.occupiedSeats = remainingPeople; 
+            //         remainingPeople = 0;
+            //     }
+            // } else {
+            //     table.occupiedSeats = 0; 
+            // }
             _syncIndividualTable(tableNum);
         }
 
@@ -4562,7 +4564,7 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
         _updateTableStatusForReservation(
             _numbers, 
             bytes32(0), 
-            0, 
+            // 0, 
             TABLE_STATUS.AVAILABLE
         );
     }   
@@ -4575,15 +4577,14 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
 
         require(oldTable.number != 0 && newTable.number != 0, "Table not found");
         require(oldTable.number != newTable.number, "New table must be different");
-        require(
-            newTable.numPeople >= (newTable.occupiedSeats + oldTable.occupiedSeats), 
-            "There aren't enough seats."
-        );
-        // require(newTable.status == TABLE_STATUS.AVAILABLE, "The new desk must be empty.");
+        // require(
+        //     newTable.numPeople >= (newTable.occupiedSeats + oldTable.occupiedSeats), 
+        //     "There aren't enough seats."
+        // );
 
         // dữ liệu sang bàn mới
         newTable.status = oldTable.status;
-        newTable.occupiedSeats = newTable.occupiedSeats + oldTable.occupiedSeats;
+        // newTable.occupiedSeats = newTable.occupiedSeats + oldTable.occupiedSeats;
         newTable.parentTableId = oldTable.parentTableId;
         // newTable.sessionIds = oldTable.sessionIds;
         uint256 sessionLength = oldTable.sessionIds.length;
@@ -4593,7 +4594,7 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
 
         // GIẢI PHÓNG BÀN CŨ & ĐẶT TRẠNG THÁI BẢO TRÌ
         delete oldTable.sessionIds;
-        oldTable.occupiedSeats = 0;
+        // oldTable.occupiedSeats = 0;
         oldTable.parentTableId = 0;
         oldTable.status = TABLE_STATUS.BLOCKED; // Khóa bàn cũ để sửa
 
@@ -4604,15 +4605,16 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
 
     function updateTableFromOrder(
         uint256 _tableNumber, 
-        bytes32 sessionId, 
-        uint256 _numPeople
+        bytes32 sessionId
+        // uint256 _numPeople
     ) external onlyOrder {
         Table storage table = mNumberToTable[_tableNumber];
         require(table.number != 0, "Table not found");
-        uint count = table.occupiedSeats + _numPeople;
-        // Cập nhật dữ liệu
-        table.status = count == table.numPeople ? TABLE_STATUS.FULL : TABLE_STATUS.ACTIVE;
-        table.occupiedSeats += _numPeople;
+
+        // uint count = table.occupiedSeats + _numPeople;
+        // table.status = count == table.numPeople ? TABLE_STATUS.FULL : TABLE_STATUS.ACTIVE;
+        table.status = TABLE_STATUS.ACTIVE;
+        // table.occupiedSeats += _numPeople;
         
         if (sessionId != bytes32(0)) {
             table.sessionIds.push(sessionId);
@@ -4644,32 +4646,57 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
             // Reset trạng thái bàn về mặc định
             table.status = TABLE_STATUS.AVAILABLE;
             table.parentTableId = 0;
-            table.occupiedSeats = 0;
+            // table.occupiedSeats = 0;
             
             _syncIndividualTable(tableNum);
         }
     }
 
      // clear bàn 
-    function ClearTable(uint256 tableNum, bytes32 sessionId, uint _numPeople) external {
+    // function ClearTable(uint256 tableNum, bytes32 sessionId, uint _numPeople) external {
+    //     Table storage table = mNumberToTable[tableNum];
+    //     require(table.number != 0, "Table not found");
+
+    //     if(table.occupiedSeats > _numPeople) {
+    //         table.status = TABLE_STATUS.ACTIVE;
+    //         table.occupiedSeats -= _numPeople;
+    //     } else {
+    //         table.status = TABLE_STATUS.AVAILABLE;
+    //         table.occupiedSeats = 0;
+    //     }
+
+    //     uint length = table.sessionIds.length;
+    //     for(uint i = 0; i < length; i++) {
+    //         if(table.sessionIds[i] == sessionId) {
+    //             table.sessionIds[i] = table.sessionIds[length - 1];
+    //             table.sessionIds.pop();
+    //             break; 
+    //         }
+    //     }
+    // }
+
+    function ClearTable(uint256 tableNum, bytes32 sessionId) external {
         Table storage table = mNumberToTable[tableNum];
         require(table.number != 0, "Table not found");
 
-        if(table.occupiedSeats > _numPeople) {
-            table.status = TABLE_STATUS.ACTIVE;
-            table.occupiedSeats -= _numPeople;
-        } else {
-            table.status = TABLE_STATUS.AVAILABLE;
-            table.occupiedSeats = 0;
-        }
+        uint256 length = table.sessionIds.length;
+        bool found = false;
 
-        uint length = table.sessionIds.length;
-        for(uint i = 0; i < length; i++) {
-            if(table.sessionIds[i] == sessionId) {
+        // Tìm và xóa sessionId cụ thể (Swap and Pop)
+        for (uint256 i = 0; i < length; i++) {
+            if (table.sessionIds[i] == sessionId) {
                 table.sessionIds[i] = table.sessionIds[length - 1];
                 table.sessionIds.pop();
+                found = true;
                 break; 
             }
+        }
+
+        if (table.sessionIds.length == 0) {
+            table.status = TABLE_STATUS.AVAILABLE;
+            // table.occupiedSeats = 0; 
+        } else {
+            table.status = TABLE_STATUS.ACTIVE;
         }
     }
 }

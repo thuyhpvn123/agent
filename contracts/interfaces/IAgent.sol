@@ -51,11 +51,20 @@ struct RobotInputs{
     address _RobotLocationV2IMP;
     address _RobotQuestionV2IMP;        
     address _StaffAgentStore; //proxy dùng cho tất cả agent
-    // address _freeGasSc;
-    // address _iqrFactory;
-    // address _meosFactory;
 }
-
+struct RobotInputsBeacon{ 
+    address StaffRobotBeacon; //implement ;not proxy
+    address RobotRegistryBeacon;
+    address RobotActiveBeacon;
+    address RobotLoadBeacon;
+    address RobotObservationTrainingBeacon;
+    address RobotTestingBeacon;
+    address RobotDashboadBeacon;
+    address RobotLocationBeacon;
+    address RobotQuestionBeacon;  
+    address StaffAgentStore; //proxy dùng cho tất cả agent
+      
+}
 struct AgentInfo {
     address walletAddress;
     string storeName;

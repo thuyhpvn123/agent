@@ -136,19 +136,19 @@ interface IManagement {
     function GetActiveStaffAddressesByDate(uint date) external view returns (address[] memory);
 
     // Added 09/03/2026 
-    function mergeTables(uint256[] memory _number, bytes32 sessionId, uint256 _numPeople, TABLE_STATUS _status) external;
+    // function mergeTables(uint256[] memory _number, bytes32 sessionId, uint256 _numPeople, TABLE_STATUS _status) external;
+    function mergeTables(uint256[] memory _number, bytes32 sessionId, TABLE_STATUS _status) external;
     function separateTables(uint256[] memory _numbers) external;
     function isSessionAvailable(uint tableId, uint _numPeople) external returns(bool);
     function transferTable(uint256 _fromTable, uint256 _toTable) external;
     function removeTablesFromMerge(uint256[] memory _tableNumbers) external;
     function checkSessionIdFromTableMerge(uint256 tableNum) external returns(bytes32);
-    function ClearTable(uint256 tableNum, bytes32 sessionId, uint _numPeople) external;
-    function mergeMoreTables(uint256[] memory _tableNumbers, uint256 tableParent ,uint256 _numPeople) external;
-     function updateTableFromOrder(
-        uint256 _tableNumber, 
-        bytes32 sessionId, 
-        uint256 _numPeople
-    ) external;
+    // function ClearTable(uint256 tableNum, bytes32 sessionId, uint _numPeople) external;
+    function ClearTable(uint256 tableNum, bytes32 sessionId) external;
+    // function mergeMoreTables(uint256[] memory _tableNumbers, uint256 tableParent ,uint256 _numPeople) external;
+    function mergeMoreTables(uint256[] memory _tableNumbers, uint256 tableParent) external;
+    //  function updateTableFromOrder(uint256 _tableNumber, bytes32 sessionId, uint256 _numPeople) external;
+    function updateTableFromOrder(uint256 _tableNumber, bytes32 sessionId) external;
 
     function branchId() external view returns (uint256);
 }

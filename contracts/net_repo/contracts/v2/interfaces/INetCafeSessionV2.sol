@@ -11,6 +11,13 @@ interface INetCafeSessionV2 {
         bool active;
     }
 
-    function getSession(address sessionWallet) external view returns (Session memory);
+    function getSession(
+        address sessionWallet
+    ) external view returns (Session memory);
     function closeSessionByModule(address sessionWallet) external;
+    function validateSession(
+        address sessionWallet,
+        bytes32 sessionKeyHash,
+        bytes32 pcId
+    ) external returns (bool);
 }

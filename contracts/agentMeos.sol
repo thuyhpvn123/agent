@@ -46,13 +46,13 @@ contract AgentMeos is OwnableUpgradeable {
     constructor(
         address _agent,
         address _enhancedAgent,
-        address _StaffMeosSCIMP,
-        address _NetCafeUserIMP,
-        address _NetCafeSessionIMP,
-        address _NetCafeTopUpIMP,
-        address _NetCafeSpendIMP,
-        address _NetCafeManagementIMP,
-        address _NetCafeStationIMP,
+        address _StaffMeosBeacon,
+        address _NetCafeUserBeacon,
+        address _NetCafeSessionBeacon,
+        address _NetCafeTopUpBeacon,
+        address _NetCafeSpendBeacon,
+        address _NetCafeManagementBeacon,
+        address _NetCafeStationBeacon,
         address _StaffAgentStore,
         address _iqrFactory,
         uint _branchId,
@@ -66,13 +66,13 @@ contract AgentMeos is OwnableUpgradeable {
         iqrFactory = _iqrFactory;
         initializeMEOSSCS(
             _agent,
-            _StaffMeosSCIMP,
-            _NetCafeUserIMP,
-            _NetCafeSessionIMP,
-            _NetCafeTopUpIMP,
-            _NetCafeSpendIMP,
-            _NetCafeManagementIMP,
-            _NetCafeStationIMP,
+            _StaffMeosBeacon,
+            _NetCafeUserBeacon,
+            _NetCafeSessionBeacon,
+            _NetCafeTopUpBeacon,
+            _NetCafeSpendBeacon,
+            _NetCafeManagementBeacon,
+            _NetCafeStationBeacon,
             _StaffAgentStore,
             _branchId,
             _hasIqr);
@@ -95,13 +95,13 @@ contract AgentMeos is OwnableUpgradeable {
 
     function initializeMEOSSCS(
         address _agent,
-        address _StaffMeosSC_IMP,
-        address _NetCafeUserIMP,
-        address _NetCafeSessionIMP,
-        address _NetCafeTopUpIMP,
-        address _NetCafeSpendIMP,
-        address _NetCafeManagementIMP,
-        address _NetCafeStationIMP,
+        address _StaffMeosBeacon,
+        address _NetCafeUserBeacon,
+        address _NetCafeSessionBeacon,
+        address _NetCafeTopUpBeacon,
+        address _NetCafeSpendBeacon,
+        address _NetCafeManagementBeacon,
+        address _NetCafeStationBeacon,
         address _StaffAgentStore,
         uint _branchId,
         bool _hasIqr
@@ -113,7 +113,7 @@ contract AgentMeos is OwnableUpgradeable {
             StaffMeosSC_PROXY_ADD = iqr.Management;
         }else{
             require(address(StaffMeosBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-            StaffMeosBeacon = new UpgradeableBeacon(_StaffMeosSC_IMP, address(this));
+            StaffMeosBeacon = UpgradeableBeacon(_StaffMeosBeacon);
 
             BeaconProxy StaffMeosSC_PROXY = new BeaconProxy(
                 address(StaffMeosBeacon),
@@ -124,7 +124,7 @@ contract AgentMeos is OwnableUpgradeable {
         }
 
         require(address(NetCafeUserBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        NetCafeUserBeacon = new UpgradeableBeacon(_NetCafeUserIMP, address(this));
+        NetCafeUserBeacon = UpgradeableBeacon(_NetCafeUserBeacon);
         BeaconProxy NetCafeUser_PROXY = new BeaconProxy(
             address(NetCafeUserBeacon),
             abi.encodeWithSelector(INetCafeUser.initialize.selector,
@@ -132,7 +132,7 @@ contract AgentMeos is OwnableUpgradeable {
         );
 
         require(address(NetCafeSessionBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        NetCafeSessionBeacon = new UpgradeableBeacon(_NetCafeSessionIMP, address(this));
+        NetCafeSessionBeacon = UpgradeableBeacon(_NetCafeSessionBeacon);
         BeaconProxy NetCafeSession_PROXY = new BeaconProxy(
             address(NetCafeSessionBeacon),
             abi.encodeWithSelector(INetCafeSession.initialize.selector,
@@ -142,7 +142,7 @@ contract AgentMeos is OwnableUpgradeable {
         );
 
         require(address(NetCafeTopUpBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        NetCafeTopUpBeacon = new UpgradeableBeacon(_NetCafeTopUpIMP, address(this));
+        NetCafeTopUpBeacon = UpgradeableBeacon(_NetCafeTopUpBeacon);
         BeaconProxy NetCafeTopUp_PROXY = new BeaconProxy(
             address(NetCafeTopUpBeacon), 
             abi.encodeWithSelector(INetCafeTopUp.initialize.selector, 
@@ -152,7 +152,7 @@ contract AgentMeos is OwnableUpgradeable {
         );
 
         require(address(NetCafeSpendBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        NetCafeSpendBeacon = new UpgradeableBeacon(_NetCafeSpendIMP, address(this));
+        NetCafeSpendBeacon = UpgradeableBeacon(_NetCafeSpendBeacon);
         BeaconProxy NetCafeSpend_PROXY = new BeaconProxy(
             address(NetCafeSpendBeacon), 
             abi.encodeWithSelector(INetCafeSpend.initialize.selector, 
@@ -163,7 +163,7 @@ contract AgentMeos is OwnableUpgradeable {
         );
 
         require(address(NetCafeManagementBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        NetCafeManagementBeacon = new UpgradeableBeacon(_NetCafeManagementIMP, address(this));
+        NetCafeManagementBeacon = UpgradeableBeacon(_NetCafeManagementBeacon);
         BeaconProxy NetCafeManagement_PROXY = new BeaconProxy(
             address(NetCafeManagementBeacon), 
             abi.encodeWithSelector(INetCafeManagement.initialize.selector, 
@@ -171,7 +171,7 @@ contract AgentMeos is OwnableUpgradeable {
         );
 
         require(address(NetCafeStationBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        NetCafeStationBeacon = new UpgradeableBeacon(_NetCafeStationIMP, address(this));
+        NetCafeStationBeacon = UpgradeableBeacon(_NetCafeStationBeacon);
         BeaconProxy NetCafeStation_PROXY = new BeaconProxy(
             address(NetCafeStationBeacon), 
             abi.encodeWithSelector(INetCafeStation.initialize.selector, 
@@ -258,104 +258,59 @@ contract AgentMeos is OwnableUpgradeable {
     //     isActive = true;
     //     IStaffMeos(StaffMeosSC).setActive(true);
     // }
-    function upgradeBeacon(
-        address _newImplStaffMeos,
-        address _newImplNetCafeUser,
-        address _newImplNetCafeSession,
-        address _newImplNetCafeTopUp,
-        address _newImplNetCafeSpend,
-        address _newImplNetCafeManagement,
-        address _newImplNetCafeStation
-    ) external  {
-        if(_newImplStaffMeos != address(0)){
-            require(address(StaffMeosBeacon) != address(0), "Beacon not created yet");
-            address oldImplStaffMeos = StaffMeosBeacon.implementation();
-            StaffMeosBeacon.upgradeTo(_newImplStaffMeos);
-            emit BeaconUpgraded(address(StaffMeosBeacon), oldImplStaffMeos, _newImplStaffMeos, block.timestamp);
-        }
+    // function upgradeBeacon(
+    //     address _newImplStaffMeos,
+    //     address _newImplNetCafeUser,
+    //     address _newImplNetCafeSession,
+    //     address _newImplNetCafeTopUp,
+    //     address _newImplNetCafeSpend,
+    //     address _newImplNetCafeManagement,
+    //     address _newImplNetCafeStation
+    // ) external  {
+    //     if(_newImplStaffMeos != address(0)){
+    //         require(address(StaffMeosBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplStaffMeos = StaffMeosBeacon.implementation();
+    //         StaffMeosBeacon.upgradeTo(_newImplStaffMeos);
+    //         emit BeaconUpgraded(address(StaffMeosBeacon), oldImplStaffMeos, _newImplStaffMeos, block.timestamp);
+    //     }
 
-        if(_newImplNetCafeUser != address(0)){
-            require(address(NetCafeUserBeacon) != address(0), "Beacon not created yet");
-            address oldImplManagement = NetCafeUserBeacon.implementation();
-            NetCafeUserBeacon.upgradeTo(_newImplNetCafeUser);
-            emit BeaconUpgraded(address(NetCafeUserBeacon), oldImplManagement, _newImplNetCafeUser, block.timestamp);
-        }
-        if(_newImplNetCafeSession != address(0)){
-            require(address(NetCafeSessionBeacon) != address(0), "Beacon not created yet");
-            address oldImplOrder = NetCafeSessionBeacon.implementation();
-            NetCafeSessionBeacon.upgradeTo(_newImplNetCafeSession);
-            emit BeaconUpgraded(address(NetCafeSessionBeacon), oldImplOrder, _newImplNetCafeSession, block.timestamp);
-        }
-        if(_newImplNetCafeTopUp != address(0)){
-            require(address(NetCafeTopUpBeacon) != address(0), "Beacon not created yet");
-            address oldImplNetCafeTopUp = NetCafeTopUpBeacon.implementation();
-            NetCafeTopUpBeacon.upgradeTo(_newImplNetCafeTopUp);
-            emit BeaconUpgraded(address(NetCafeTopUpBeacon), oldImplNetCafeTopUp, _newImplNetCafeTopUp, block.timestamp);
-        }
-        if(_newImplNetCafeSpend != address(0)){
-            require(address(NetCafeSpendBeacon) != address(0), "Beacon not created yet");
-            address oldImplNetCafeSpend = NetCafeSpendBeacon.implementation();
-            NetCafeSpendBeacon.upgradeTo(_newImplNetCafeSpend);
-            emit BeaconUpgraded(address(NetCafeSpendBeacon), oldImplNetCafeSpend, _newImplNetCafeSpend, block.timestamp);
-        }
-        if(_newImplNetCafeManagement != address(0)){
-            require(address(NetCafeManagementBeacon) != address(0), "Beacon not created yet");
-            address oldImplNetCafeManagement = NetCafeManagementBeacon.implementation();
-            NetCafeManagementBeacon.upgradeTo(_newImplNetCafeManagement);
-            emit BeaconUpgraded(address(NetCafeManagementBeacon), oldImplNetCafeManagement, _newImplNetCafeManagement, block.timestamp);
-        }
-        if(_newImplNetCafeStation != address(0)){
-            require(address(NetCafeStationBeacon) != address(0), "Beacon not created yet");
-            address oldImplNetCafeStation = NetCafeStationBeacon.implementation();
-            NetCafeStationBeacon.upgradeTo(_newImplNetCafeStation);
-            emit BeaconUpgraded(address(NetCafeStationBeacon), oldImplNetCafeStation, _newImplNetCafeStation, block.timestamp);
-        }
+    //     if(_newImplNetCafeUser != address(0)){
+    //         require(address(NetCafeUserBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplManagement = NetCafeUserBeacon.implementation();
+    //         NetCafeUserBeacon.upgradeTo(_newImplNetCafeUser);
+    //         emit BeaconUpgraded(address(NetCafeUserBeacon), oldImplManagement, _newImplNetCafeUser, block.timestamp);
+    //     }
+    //     if(_newImplNetCafeSession != address(0)){
+    //         require(address(NetCafeSessionBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplOrder = NetCafeSessionBeacon.implementation();
+    //         NetCafeSessionBeacon.upgradeTo(_newImplNetCafeSession);
+    //         emit BeaconUpgraded(address(NetCafeSessionBeacon), oldImplOrder, _newImplNetCafeSession, block.timestamp);
+    //     }
+    //     if(_newImplNetCafeTopUp != address(0)){
+    //         require(address(NetCafeTopUpBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplNetCafeTopUp = NetCafeTopUpBeacon.implementation();
+    //         NetCafeTopUpBeacon.upgradeTo(_newImplNetCafeTopUp);
+    //         emit BeaconUpgraded(address(NetCafeTopUpBeacon), oldImplNetCafeTopUp, _newImplNetCafeTopUp, block.timestamp);
+    //     }
+    //     if(_newImplNetCafeSpend != address(0)){
+    //         require(address(NetCafeSpendBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplNetCafeSpend = NetCafeSpendBeacon.implementation();
+    //         NetCafeSpendBeacon.upgradeTo(_newImplNetCafeSpend);
+    //         emit BeaconUpgraded(address(NetCafeSpendBeacon), oldImplNetCafeSpend, _newImplNetCafeSpend, block.timestamp);
+    //     }
+    //     if(_newImplNetCafeManagement != address(0)){
+    //         require(address(NetCafeManagementBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplNetCafeManagement = NetCafeManagementBeacon.implementation();
+    //         NetCafeManagementBeacon.upgradeTo(_newImplNetCafeManagement);
+    //         emit BeaconUpgraded(address(NetCafeManagementBeacon), oldImplNetCafeManagement, _newImplNetCafeManagement, block.timestamp);
+    //     }
+    //     if(_newImplNetCafeStation != address(0)){
+    //         require(address(NetCafeStationBeacon) != address(0), "Beacon not created yet");
+    //         address oldImplNetCafeStation = NetCafeStationBeacon.implementation();
+    //         NetCafeStationBeacon.upgradeTo(_newImplNetCafeStation);
+    //         emit BeaconUpgraded(address(NetCafeStationBeacon), oldImplNetCafeStation, _newImplNetCafeStation, block.timestamp);
+    //     }
 
-    }
-    /**
-     * @dev Transfer beacon ownership sang địa chỉ khác nếu cần.
-     *      Hiếm khi dùng — chỉ khi muốn trao quyền upgrade beacon cho bên khác.
-     */
-    function transferBeaconOwnership(address _newOwner) external onlyOwner {
-        require(
-            address(NetCafeUserBeacon) != address(0) &&
-            address(NetCafeSessionBeacon) != address(0) &&
-            address(NetCafeTopUpBeacon) != address(0) &&
-            address(NetCafeSpendBeacon) != address(0) &&
-            address(NetCafeManagementBeacon) != address(0) &&
-            address(NetCafeStationBeacon) != address(0),
-        "Beacon not created");
-        require(_newOwner != address(0), "Invalid address");
-        NetCafeUserBeacon.transferOwnership(_newOwner);
-        NetCafeSessionBeacon.transferOwnership(_newOwner);
-        NetCafeTopUpBeacon.transferOwnership(_newOwner);
-        NetCafeSpendBeacon.transferOwnership(_newOwner);
-        NetCafeManagementBeacon.transferOwnership(_newOwner);
-        NetCafeStationBeacon.transferOwnership(_newOwner);
-    }
-    /**
-     * @dev Lấy địa chỉ implementation hiện tại từ beacon
-     */
-    function currentImplementation() external view returns (address,address,address,address,address,address,address) {
-        require(
-            address(StaffMeosBeacon) != address(0) &&
-            address(NetCafeUserBeacon) != address(0) && 
-            address(NetCafeSessionBeacon) != address(0) &&
-            address(NetCafeTopUpBeacon) != address(0) &&
-            address(NetCafeSpendBeacon) != address(0) &&
-            address(NetCafeManagementBeacon) != address(0) &&
-            address(NetCafeStationBeacon) != address(0), 
-            "Beacon not created"
-        );
-        return (
-            StaffMeosBeacon.implementation(),
-            NetCafeUserBeacon.implementation(),
-            NetCafeSessionBeacon.implementation(),
-            NetCafeTopUpBeacon.implementation(),
-            NetCafeSpendBeacon.implementation(),
-            NetCafeManagementBeacon.implementation(),
-            NetCafeStationBeacon.implementation()
-        );
-    }
+    // }
 
 }

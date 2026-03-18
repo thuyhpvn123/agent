@@ -782,7 +782,7 @@ contract RestaurantTest is Test {
     function testMakeOrder()public{
         vm.warp(1759724234);//11h17 -7/10/2025
         //order lan 1 table1
-        (bytes32 sessionIdT1, ) = ORDER.CreateSessionForTable(2, 3, bytes32(0));
+        (bytes32 sessionIdT1, ) = ORDER.CreateSessionForTable(2, bytes32(0));
  
         uint table =1;
         string[] memory dishCodes = new string[](3);

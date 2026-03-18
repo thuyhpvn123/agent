@@ -26,7 +26,7 @@ contract RestaurantOrder is
     Initializable, 
     ReentrancyGuardUpgradeable, 
     OwnableUpgradeable, 
-    PausableUpgradeable 
+    PausableUpgradeable
     // UUPSUpgradeable 
     {
 
@@ -122,7 +122,7 @@ contract RestaurantOrder is
     event PaymentWithPoints(bytes32 indexed paymentId, address indexed customer, uint256 pointsUsed, uint256 pointsValue, uint256 remainingCash);
     // event OrderConfirmed(uint table, bytes32 orderId);
     event OrderConfirmed(bytes32 sessionId, bytes32 orderId);
-    event CallStaff(uint table, uint amount);
+    event CallStaff(uint table, uint amount,string memberId);
     event BatchCourseStatusUpdated(bytes32 indexed sessionId, bytes32 _orderId, COURSE_STATUS newStatus);
     event CourseStatusUpdated(bytes32 indexed sessionId, bytes32 _orderId, uint _courseId, COURSE_STATUS newStatus);
 
@@ -158,6 +158,9 @@ contract RestaurantOrder is
         bytes32 indexed reservationId, 
         uint256 cancelledAt
     );
+
+    // Added 16/03/2026 Event for service issue reporting (slow service, complaints)
+    event ServiceIssueReported(bytes32 indexed orderId, uint indexed table, string issueType, string description, address reportedBy,uint timestamp);
     
     // constructor() {
     //     _disableInitializers();
@@ -946,6 +949,7 @@ contract RestaurantOrder is
         require(block.timestamp >= from && block.timestamp <= to, "Discount expired");
         
         if (discountType == DiscountType.AUTO_GROUP) {
+            // require(customerGroup != bytes32(0), "Customer not in any group");
             bool inTargetGroup = false;
             for (uint i = 0; i < targetGroupIds.length; i++) {
                 for (uint j = 0; j < customerGroup.length; j++) {
@@ -963,9 +967,9 @@ contract RestaurantOrder is
     }
     
     
-    function callStaff(uint table, uint amount) external {
+    function callStaff(uint table, uint amount, string memory memberId) external {
         address[] memory staffsPayment = MANAGEMENT.GetStaffRolePayment();
-        emit CallStaff(table, amount);
+        emit CallStaff(table, amount,memberId);
     }
 
     
@@ -1061,7 +1065,8 @@ contract RestaurantOrder is
         else {
             Session memory sessionData = mIdToSession[sessionId];
             _removeFromTableSessionList(table, sessionId);
-            MANAGEMENT.ClearTable(table, sessionId, sessionData.seatUsed);
+            // MANAGEMENT.ClearTable(table, sessionId, sessionData.seatUsed);
+            MANAGEMENT.ClearTable(table, sessionId);
         }
         
         mIdToSession[sessionId].status = SESSION_STATUS.CLOSED;
@@ -2513,7 +2518,7 @@ contract RestaurantOrder is
     }
 
 
-    function _internalHandleFinancials(
+ function _internalHandleFinancials(
         Payment storage payment,
         bytes32 sessionId,
         uint256 tip,
@@ -2946,7 +2951,8 @@ contract RestaurantOrder is
     }
 
     // Tạo session cho khách
-    function _createSession(uint256 _tableNumber, uint256 _numPeople,bytes32 _reservationId) internal returns(bytes32) {
+    // function _createSession(uint256 _tableNumber, uint256 _numPeople,bytes32 _reservationId) internal returns(bytes32) {
+    function _createSession(uint256 _tableNumber,bytes32 _reservationId) internal returns(bytes32) {
         // Lấy thông tin bàn từ Management Contract
         Table memory table = MANAGEMENT.GetTable(_tableNumber);
         
@@ -2957,12 +2963,11 @@ contract RestaurantOrder is
             // && table.status != TABLE_STATUS.MERGED, 
             ,"That table is already full."
         );
-        require(MANAGEMENT.isSessionAvailable(_tableNumber, _numPeople),"Not enough seats in the session.");
+        // require(MANAGEMENT.isSessionAvailable(_tableNumber, _numPeople),"Not enough seats in the session.");
 
         bytes32 newSessionId = keccak256(abi.encodePacked(
             block.timestamp, 
             _tableNumber, 
-            _numPeople,
             msg.sender
         ));
 
@@ -2970,16 +2975,17 @@ contract RestaurantOrder is
             sessionId: newSessionId,
             tableId: table.number,
             customer: address(0),
-            cType: _numPeople == 1 ? CustomerType.SINGLE : _numPeople == 2 ? CustomerType.COUPLE : CustomerType.GROUP,
+            // cType: _numPeople == 1 ? CustomerType.SINGLE : _numPeople == 2 ? CustomerType.COUPLE : CustomerType.GROUP,
             status: SESSION_STATUS.CREATED,
-            seatUsed: _numPeople,
+            // seatUsed: _numPeople,
             creator: msg.sender,
             typeSession: SessionType.CREATED,
             reservationId: _reservationId
         });
         // if(_numPeople == table.numPeople) MANAGEMENT.mergeTables([_tableNumber], newSessionId, _numPeople,_status);
         // else 
-        MANAGEMENT.updateTableFromOrder(_tableNumber, newSessionId, _numPeople);
+        // MANAGEMENT.updateTableFromOrder(_tableNumber, newSessionId, _numPeople);
+        MANAGEMENT.updateTableFromOrder(_tableNumber, newSessionId);
         mTableToSessionIds[_tableNumber].push(newSessionId); 
         // mSessionToTable[newSessionId] = _tableNumber;
         mIdToSession[newSessionId] = session;
@@ -2988,7 +2994,8 @@ contract RestaurantOrder is
         return newSessionId;
     }
 
-    function _internalCreateSessionForReservation(uint256[] memory _tableNumber, uint256 _numPeople,bytes32 _reservationId, TABLE_STATUS _status) internal returns(bytes32) {
+    // function _internalCreateSessionForReservation(uint256[] memory _tableNumber, uint256 _numPeople,bytes32 _reservationId, TABLE_STATUS _status) internal returns(bytes32) {
+    function _internalCreateSessionForReservation(uint256[] memory _tableNumber,bytes32 _reservationId, TABLE_STATUS _status) internal returns(bytes32) {
         // Lấy thông tin bàn từ Management Contract
         uint length = _tableNumber.length;
         for(uint i = 0; i <  length; i++)
@@ -3009,7 +3016,7 @@ contract RestaurantOrder is
         bytes32 newSessionId = keccak256(abi.encodePacked(
             block.timestamp, 
             _tableNumber, 
-            _numPeople,
+            // _numPeople,
             msg.sender
         ));
 
@@ -3017,14 +3024,15 @@ contract RestaurantOrder is
             sessionId: newSessionId,
             tableId: _tableNumber[0],
             customer: address(0),
-            cType: _numPeople == 1 ? CustomerType.SINGLE : _numPeople == 2 ? CustomerType.COUPLE : CustomerType.GROUP,
+            // cType: _numPeople == 1 ? CustomerType.SINGLE : _numPeople == 2 ? CustomerType.COUPLE : CustomerType.GROUP,
             status: SESSION_STATUS.CREATED,
-            seatUsed: _numPeople,
+            // seatUsed: _numPeople,
             creator: msg.sender,
             typeSession: SessionType.CREATED,
             reservationId: _reservationId
         });
-        MANAGEMENT.mergeTables(_tableNumber, newSessionId, _numPeople,_status);
+        // MANAGEMENT.mergeTables(_tableNumber, newSessionId, _numPeople,_status);
+        MANAGEMENT.mergeTables(_tableNumber, newSessionId,_status);
         // for(i = 0; i <  length; i++)
         // {
         //     mTableToSessionsId[_tableNumber[i]].push(newSessionId); 
@@ -3041,15 +3049,19 @@ contract RestaurantOrder is
     }
 
     // Khóa bàn lại cho khách đặt trước
-    function LockTableForReservation(uint[] calldata _table, uint256 _numPeople, bytes32 _reservationId) external onlyStaff {
-        bytes32 sessionId = _internalCreateSessionForReservation(_table,_numPeople,_reservationId, TABLE_STATUS.RESERVED);
+    // function LockTableForReservation(uint[] calldata _table, uint256 _numPeople, bytes32 _reservationId) external onlyStaff {
+    function LockTableForReservation(uint[] calldata _table, bytes32 _reservationId) external onlyStaff {
+        // bytes32 sessionId = _internalCreateSessionForReservation(_table,_numPeople,_reservationId, TABLE_STATUS.RESERVED);
+        bytes32 sessionId = _internalCreateSessionForReservation(_table,_reservationId, TABLE_STATUS.RESERVED);
         mSessionToTableMerge[sessionId] =_table;
         emit LockTableSession(_table, sessionId, block.timestamp);
     }
 
     // merge table từ nhân viên
-    function MergeTableByStaff(uint[] calldata _table, uint256 _numPeople, bytes32 _reservationId) external onlyStaff {
-        bytes32 sessionId = _internalCreateSessionForReservation(_table,_numPeople,_reservationId, TABLE_STATUS.MERGED_PARENT);
+    // function MergeTableByStaff(uint[] calldata _table, uint256 _numPeople, bytes32 _reservationId) external onlyStaff {
+    function MergeTableByStaff(uint[] calldata _table, bytes32 _reservationId) external onlyStaff {
+        // bytes32 sessionId = _internalCreateSessionForReservation(_table,_numPeople,_reservationId, TABLE_STATUS.MERGED_PARENT);
+        bytes32 sessionId = _internalCreateSessionForReservation(_table,_reservationId, TABLE_STATUS.MERGED_PARENT);
         mSessionToTableMerge[sessionId] =_table;
         emit MergeTableFromStaff(_table, sessionId, block.timestamp);
     }
@@ -3085,7 +3097,8 @@ contract RestaurantOrder is
     }
 
      // merge thêm table từ nhân viên
-    function MergeMoreTableByStaff(uint[] calldata _table, uint256 _numPeople, bytes32 sessionId) external onlyStaff {
+    // function MergeMoreTableByStaff(uint[] calldata _table, uint256 _numPeople, bytes32 sessionId) external onlyStaff {
+    function MergeMoreTableByStaff(uint[] calldata _table, bytes32 sessionId) external onlyStaff {
         uint256 tableNum = mIdToSession[sessionId].tableId;
         require(tableNum != 0, "Session not found");
         uint256[] storage mergedTables = mSessionToTableMerge[sessionId];
@@ -3093,7 +3106,7 @@ contract RestaurantOrder is
             mergedTables.push(_table[i]);
         }   
 
-        MANAGEMENT.mergeMoreTables(_table,tableNum,_numPeople);
+        MANAGEMENT.mergeMoreTables(_table,tableNum);
         emit MergeMoreTableFromStaff(_table,tableNum, sessionId, block.timestamp);
     }
 
@@ -3138,7 +3151,7 @@ contract RestaurantOrder is
 
     function CreateSessionForTable(
         uint256 _tableNumber,
-        uint256 _numPeople,
+        // uint256 _numPeople,
         bytes32 _reservationId
     ) external returns(bytes32 sessionId, bool isMerge)
      { 
@@ -3154,7 +3167,7 @@ contract RestaurantOrder is
             isMerge = true;
         } 
         else {
-            sessionId = _createSession(_tableNumber, _numPeople, _reservationId);
+            sessionId = _createSession(_tableNumber, _reservationId);
             isMerge = false;
         }
 
@@ -3200,6 +3213,13 @@ contract RestaurantOrder is
         revert("PaymentInfo not found");
     }
 
+    function getAllSessionPayments(bytes32 _sessionId) external view returns (Payment[] memory) {
+        return mSessionToPayment[_sessionId];
+    }
+    function getAllSessionPaymentInfo(bytes32 _sessionId) external view returns (PaymentInformation[] memory) {
+        return mSessionToPaymentInformation[_sessionId];
+    }
+
     function getPaymentByOrder(bytes32 orderId) external view returns (Payment memory) {
         bytes32 pId = mOrderIdToPaymentId[orderId];
         require(pId != bytes32(0), "Order not linked to any payment");
@@ -3214,5 +3234,25 @@ contract RestaurantOrder is
 
     function getTableBySession(bytes32 sessionId) external view returns (uint256) {
         return mIdToSession[sessionId].tableId;
+    }
+
+    // Added 16/03/2026 hàm report từ customer
+    function reportServiceIssue(
+        bytes32 orderId,
+        uint table,
+        string calldata issueType,
+        string calldata description
+    ) external {
+        require(orderId != bytes32(0), "Invalid order ID");
+        require(bytes(issueType).length > 0, "Issue type required");
+
+        emit ServiceIssueReported(
+            orderId,
+            table,
+            issueType,
+            description,
+            msg.sender,
+            block.timestamp
+        );
     }
 }

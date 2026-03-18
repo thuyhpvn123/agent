@@ -10,6 +10,8 @@ import {AgentIQR} from "./agentIqr.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 // import "forge-std/console.sol";
 import "./interfaces/IFreeGas.sol";
+import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     
     string public version;
@@ -30,6 +32,12 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // address public BRANCH_MANAGEMENT_IMP;
     // address public HISTORY_TRACKING_IMP;
     address public freeGasSc;
+    UpgradeableBeacon public ManagementBeacon;
+    UpgradeableBeacon public OrderBeacon;
+    UpgradeableBeacon public ReportBeacon;
+    UpgradeableBeacon public TimekeepingBeacon;
+    mapping(address => bool) public isAdminIqr;
+
     uint256[49] private __gap;
     event AgentIQRCreated(address indexed agent,uint indexed branchId ,address indexed contractAddr, uint256 timestamp);
     event ContractUpgraded(string oldVersion, string newVersion, uint256 timestamp);
@@ -43,8 +51,16 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         version = "1.0.0";
+        isAdminIqr[msg.sender] = true;
     }
-    
+    modifier onlyAdminIqr() {
+        require(isAdminIqr[msg.sender] || msg.sender == owner(), "only adminMeos can call");
+        _;
+    }
+    function setAdminIqr(address admin, bool isAdmin) external onlyOwner {
+        require(admin != address(0), "Invalid address");
+        isAdminIqr[admin] = isAdmin;
+    }  
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     modifier onlyEnhanceSC {
         require(msg.sender == enhancedAgent,"only enhancedAgent contract can call-IQR Factory");
@@ -58,10 +74,10 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     //     freeGasSc = _freeGasSc;
     // }
     function setIQRSC(
-        address _MANAGEMENT, //implement ,not proxy
-        address _ORDER,
-        address _REPORT,
-        address _TIMEKEEPING,
+        address _MANAGEMENT_IMP, //implement ,not proxy
+        address _ORDER_IMP,
+        address _REPORT_IMP,
+        address _TIMEKEEPING_IMP,
         address _cardVisa,
         address _noti,
         address _revenueManager, //proxy dùng cho từng agent
@@ -70,10 +86,10 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         // address _HISTORY_TRACKING_IMP,
         address _freeGasSc
     )external onlyOwner {
-        if(_MANAGEMENT != address(0)){MANAGEMENT = _MANAGEMENT;} 
-        if(_ORDER != address(0)){ORDER = _ORDER;} 
-        if(_REPORT != address(0)){REPORT = _REPORT;} 
-        if(_TIMEKEEPING != address(0)){TIMEKEEPING = _TIMEKEEPING;} 
+        if(_MANAGEMENT_IMP != address(0)){MANAGEMENT = _MANAGEMENT_IMP;} 
+        if(_ORDER_IMP != address(0)){ORDER = _ORDER_IMP;} 
+        if(_REPORT_IMP != address(0)){REPORT = _REPORT_IMP;} 
+        if(_TIMEKEEPING_IMP != address(0)){TIMEKEEPING = _TIMEKEEPING_IMP;} 
         if(_cardVisa != address(0)){cardVisa = _cardVisa;} 
         if(_noti != address(0)){noti = _noti;} 
         if(_revenueManager != address(0)){revenueManager = _revenueManager;} 
@@ -81,16 +97,35 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         // if(_HISTORY_TRACKING_IMP != address(0)){HISTORY_TRACKING_IMP = _HISTORY_TRACKING_IMP;} 
         if(_freeGasSc != address(0)){freeGasSc = _freeGasSc;} 
         if(_StaffAgentStore != address(0)){StaffAgentStore = _StaffAgentStore;}  
+        initBeacons(
+            _MANAGEMENT_IMP,
+            _ORDER_IMP,
+            _REPORT_IMP,
+            _TIMEKEEPING_IMP
+        );
         
     }
     function createAgentIQR(address _agent, uint _branchId) external onlyEnhanceSC returns (address) {
-        require(MANAGEMENT != address(0) && ORDER != address(0) && REPORT != address(0) && TIMEKEEPING != address(0), //Points có thể để là address(0)
+        require(
+            address(ManagementBeacon) != address(0) && 
+            address(OrderBeacon) != address(0) && 
+            address(ReportBeacon) != address(0) && 
+            address(TimekeepingBeacon) != address(0), //Points có thể để là address(0)
             "addresses of iqr can be address(0)"
         );
         require(_agent != address(0), "Invalid agent");
         require(agentIQRContracts[_agent][_branchId] == address(0), "Contract already exists");
         
-        AgentIQR newContract = new AgentIQR(_agent,enhancedAgent,MANAGEMENT,ORDER,REPORT,TIMEKEEPING,revenueManager,StaffAgentStore,_branchId);
+        AgentIQR newContract = new AgentIQR(
+            _agent,
+            enhancedAgent,
+            address(ManagementBeacon),
+            address(OrderBeacon),
+            address(ReportBeacon),
+            address(TimekeepingBeacon),
+            revenueManager,
+            StaffAgentStore,
+            _branchId);
         IQRContracts memory iqr = newContract.getIQRSCByAgent(_agent,_branchId);
         address[] memory iqrAdds= new address[](4);
         iqrAdds[0] = iqr.Management;
@@ -158,6 +193,75 @@ contract IQRFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function getVersion() external view returns (string memory) {
         return version;
     }
+    function initBeacons(
+        address MANAGEMENT_IMP,
+        address ORDER_IMP,
+        address REPORT_IMP,
+        address TIMEKEEPING_IMP
+    )internal {
+        ManagementBeacon = new UpgradeableBeacon(MANAGEMENT_IMP, address(this));
+        OrderBeacon = new UpgradeableBeacon(ORDER_IMP, address(this));
+        ReportBeacon = new UpgradeableBeacon(REPORT_IMP, address(this));
+        TimekeepingBeacon = new UpgradeableBeacon(TIMEKEEPING_IMP, address(this));
+
+    }
+    function upgradeBeaconGlobal(
+        address _newImplManagement,
+        address _newImplOrder,
+        address _newImplReport,
+        address _newImplTimekeeping
+    ) external onlyAdminIqr {
+        
+        if(_newImplManagement != address(0)){
+            ManagementBeacon.upgradeTo(_newImplManagement);
+        }
+        if(_newImplOrder != address(0)){
+            OrderBeacon.upgradeTo(_newImplOrder);
+        }
+        if(_newImplReport != address(0)){
+            ReportBeacon.upgradeTo(_newImplReport);
+        }
+        if(_newImplTimekeeping != address(0)){
+            TimekeepingBeacon.upgradeTo(_newImplTimekeeping);
+        }
+
+    }
+        /**
+     * @dev Transfer beacon ownership sang địa chỉ khác nếu cần.
+     *      Hiếm khi dùng — chỉ khi muốn trao quyền upgrade beacon cho bên khác.
+     */
+    function transferBeaconOwnership(address _newOwner) external onlyOwner {
+        require(
+            address(ManagementBeacon) != address(0) &&
+            address(OrderBeacon) != address(0) &&
+            address(ReportBeacon) != address(0) &&
+            address(TimekeepingBeacon) != address(0), 
+        "Beacon not created");
+        require(_newOwner != address(0), "Invalid address");
+        ManagementBeacon.transferOwnership(_newOwner);
+        OrderBeacon.transferOwnership(_newOwner);
+        ReportBeacon.transferOwnership(_newOwner);
+        TimekeepingBeacon.transferOwnership(_newOwner);
+    }
+    /**
+     * @dev Lấy địa chỉ implementation hiện tại từ beacon
+     */
+    function currentImplementation() external view returns (address,address,address,address) {
+        require(
+            address(ManagementBeacon) != address(0) && 
+            address(OrderBeacon) != address(0) &&
+            address(ReportBeacon) != address(0) &&
+            address(TimekeepingBeacon) != address(0), 
+            "Beacon not created"
+        );
+        return (
+            ManagementBeacon.implementation(),
+            OrderBeacon.implementation(),
+            ReportBeacon.implementation(),
+            TimekeepingBeacon.implementation()
+        );
+    }
+
 }
 
 
