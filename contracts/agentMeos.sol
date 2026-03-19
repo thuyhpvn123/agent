@@ -217,6 +217,8 @@ contract AgentMeos is OwnableUpgradeable {
         INetCafeUser(_user).setModule(_topup,true);
         INetCafeUser(_user).setModule(_spend,true);
         INetCafeSession(_session).setModule(_spend,true);
+        INetCafeUser(_user).setSessionContract(_session);
+        INetCafeTopUp(_topup).setSessionContract(_session);
     }
     function setPointSC(address _POINTS_PROXY, address _agent, uint branchId) external onlyMeosFactory{
         MeosContracts storage meos = mAgentToMeos[_agent][branchId];

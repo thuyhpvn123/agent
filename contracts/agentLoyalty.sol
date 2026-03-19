@@ -12,7 +12,7 @@ import "./interfaces/IManagement.sol";
 import "./interfaces/IMeos.sol";
 
 import "./lib/DateTimeTZ.sol";
-import "forge-std/console.sol";
+// import "forge-std/console.sol";
 
 import {PublicfullDB} from "./loyaltyDB.sol";
 /**
@@ -147,7 +147,7 @@ contract RestaurantLoyaltySystem is
     mapping(bytes32 => bool)                  public campaignExecutionLog;
     address public TopUp;
     address public agent;
-    address public MANAGEMENT;
+    // address public mManagement[branchId];
     mapping(uint256 => address) public mOrder;
     mapping(uint256 => address) public mTopUp;
     mapping(address => bool) public isOrder;
@@ -208,6 +208,7 @@ contract RestaurantLoyaltySystem is
     }
 
     mapping(bytes32 => LockedPoint) public lockedPoints; 
+    mapping(uint256 => address) public mManagement;
 
     // ================================================================
     // EVENTS
@@ -283,16 +284,16 @@ contract RestaurantLoyaltySystem is
     // ================================================================
     // MODIFIERS
     // ================================================================
-    modifier onlyAdmin() {
-        require(IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender), "Only admin");
+    modifier onlyAdmin(uint256 _branchId) {
+        require(IManagement(mManagement[_branchId]).hasRole(ROLE_ADMIN, msg.sender), "Only admin");
         _;
     }
-    modifier onlyStaffOrAdmin() {
-        require(IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender) ||IManagement(MANAGEMENT).isStaff(msg.sender), "Only staff or admin");
+    modifier onlyStaffOrAdmin(uint256 _branchId) {
+        require(IManagement(mManagement[_branchId]).hasRole(ROLE_ADMIN, msg.sender) ||IManagement(mManagement[_branchId]).isStaff(msg.sender), "Only staff or admin");
         _;
     }
-    modifier onlyStaffWithRoleOrAdmin(STAFF_ROLE role) {
-        require(IManagement(MANAGEMENT).checkRole(role, msg.sender), "Only staff with role or admin");
+    modifier onlyStaffWithRoleOrAdmin(STAFF_ROLE role,uint256 _branchId) {
+        require(IManagement(mManagement[_branchId]).checkRole(role, msg.sender), "Only staff with role or admin");
         _;
     }
 
@@ -355,13 +356,13 @@ contract RestaurantLoyaltySystem is
         require(_maxPercentPerInvoice > 0, "Invalid maxPercentPerInvoice");
         maxPercentPerInvoice = _maxPercentPerInvoice;
     }
-    function setManagementSC(address _management) external onlyOwner {
-        MANAGEMENT = _management;
+    function setManagementSC(address _management,uint256 branchId) external onlyOwner {
+        mManagement[branchId] = _management;
     }
         /**
      * @dev Cập nhật tỷ giá quy đổi
      */
-    function updateExchangeRate(uint256 _newRate) external onlyStaffOrAdmin {
+    function updateExchangeRate(uint256 _newRate, uint256 _branchId) external onlyAdmin(_branchId) {
         require(_newRate > 0, "Invalid rate");
         exchangeRate = _newRate;
     }
@@ -375,7 +376,7 @@ contract RestaurantLoyaltySystem is
         mTopUp[branchId] = _topup;
         isTopUp[_topup] = true;
     }
-    function setManualGrantEnabled(bool _enabled) external onlyAdmin {
+    function setManualGrantEnabled(bool _enabled, uint256 _branchId) external onlyAdmin(_branchId) {
         manualGrantEnabled = _enabled;
         emit ManualGrantEnabledSet(_enabled, msg.sender, block.timestamp);
     }
@@ -451,7 +452,7 @@ contract RestaurantLoyaltySystem is
     /**
      * @dev Owner/CoOwner xóa member (ví dụ: vi phạm).
      */
-    function deleteMember(address _member) external onlyAdmin {
+    function deleteMember(address _member, uint256 _branchId) external onlyAdmin(_branchId) {
         require(members[_member].walletAddress != address(0), "Member not found");
 
         bytes32[] memory groups = memberToGroups[_member];
@@ -472,13 +473,13 @@ contract RestaurantLoyaltySystem is
         emit MemberDeleted(_member, block.timestamp);
     }
 
-    function lockMember(address _member, string calldata reason) external onlyAdmin memberExists(_member) {
+    function lockMember(address _member, string calldata reason, uint256 _branchId) external onlyAdmin(_branchId) memberExists(_member) {
         members[_member].isLocked = true;
         _syncAllMembersEntry(_member);
         emit MemberLocked(_member, msg.sender, reason, block.timestamp);
     }
 
-    function unlockMember(address _member) external onlyAdmin memberExists(_member) {
+    function unlockMember(address _member, uint256 _branchId) external onlyAdmin(_branchId) memberExists(_member) {
         members[_member].isLocked = false;
         _syncAllMembersEntry(_member);
         emit MemberUnlocked(_member, msg.sender, block.timestamp);
@@ -495,7 +496,7 @@ contract RestaurantLoyaltySystem is
     // MEMBER — GROUPS
     // ================================================================
 
-    function createMemberGroup(string calldata _name) external onlyAdmin returns (bytes32) {
+    function createMemberGroup(string calldata _name, uint256 _branchId) external onlyAdmin(_branchId) returns (bytes32) {
         require(bytes(_name).length > 0, "Name required");
         bytes32 groupId = keccak256(abi.encodePacked(_name, block.timestamp));
         require(memberGroups[groupId].id == bytes32(0), "Group exists");
@@ -518,7 +519,7 @@ contract RestaurantLoyaltySystem is
         return (memberGroups[groupId].id != bytes32(0));
     }
 
-    function updateMemberGroup(bytes32 _groupId, string calldata _name, bool _isActive) external onlyAdmin {
+    function updateMemberGroup(bytes32 _groupId, string calldata _name, bool _isActive, uint _branchId) external onlyAdmin(_branchId) {
         require(memberGroups[_groupId].id != bytes32(0), "Group not found");
         memberGroups[_groupId].name     = _name;
         memberGroups[_groupId].isActive = _isActive;
@@ -528,7 +529,7 @@ contract RestaurantLoyaltySystem is
         emit MemberGroupUpdated(_groupId, _name, block.timestamp);
     }
 
-    function deleteMemberGroup(bytes32 _groupId) external onlyAdmin {
+    function deleteMemberGroup(bytes32 _groupId, uint256 _branchId) external onlyAdmin(_branchId) {
         require(memberGroups[_groupId].id != bytes32(0), "Group not found");
         address[] memory gm = groupMembers[_groupId];
         for (uint256 i = 0; i < gm.length; i++) {
@@ -553,7 +554,7 @@ contract RestaurantLoyaltySystem is
         emit MemberGroupDeleted(_groupId, block.timestamp);
     }
 
-    function assignMemberToGroup(address _member, bytes32 _groupId) external onlyAdmin memberExists(_member) {
+    function assignMemberToGroup(address _member, bytes32 _groupId, uint256 _branchId) external onlyAdmin(_branchId) memberExists(_member) {
         require(memberGroups[_groupId].id != bytes32(0), "Group not found");
         require(!_isMemberInGroup(_member, _groupId), "Already in group");
         memberToGroups[_member].push(_groupId);
@@ -561,7 +562,7 @@ contract RestaurantLoyaltySystem is
         emit MemberAssignedToGroup(_member, _groupId, block.timestamp);
     }
 
-    function batchAssignMemberToGroups(address _member, bytes32[] calldata _groupIds) external onlyAdmin memberExists(_member) {
+    function batchAssignMemberToGroups(address _member, bytes32[] calldata _groupIds, uint256 _branchId) external onlyAdmin(_branchId) memberExists(_member) {
         for (uint256 i = 0; i < _groupIds.length; i++) {
             bytes32 gid = _groupIds[i];
             if (memberGroups[gid].id == bytes32(0)) continue;
@@ -572,7 +573,7 @@ contract RestaurantLoyaltySystem is
         }
     }
 
-    function removeMemberFromGroup(address _member, bytes32 _groupId) external onlyAdmin {
+    function removeMemberFromGroup(address _member, bytes32 _groupId, uint256 _branchId) external onlyAdmin(_branchId) {
         _removeMemberFromGroupArray(_groupId, _member);
         _removeGroupFromMember(_member, _groupId);
         emit MemberRemovedFromGroup(_member, _groupId, block.timestamp);
@@ -591,8 +592,9 @@ contract RestaurantLoyaltySystem is
         bytes32  _invoiceId,
         uint256  _amount,
         RequestEarnPointType _typeRequest,
-        string   calldata _img
-    ) external onlyStaffOrAdmin returns (uint256) {
+        string   calldata _img,
+        uint256 _branchId
+    ) external onlyStaffOrAdmin(_branchId) returns (uint256) {
         address _member = memberIdToAddress[_memberID];
         require(members[_member].isActive, "Member not found");
         require(!processedInvoices[_invoiceId], "Invoice already processed");
@@ -631,7 +633,7 @@ contract RestaurantLoyaltySystem is
     /**
      * @dev Admin duyệt manual request → credit Token A cho customer.
      */
-    function approveManualRequest(uint256 _requestId,uint256 _branchId) external onlyAdmin {
+    function approveManualRequest(uint256 _requestId,uint256 _branchId) external onlyAdmin(_branchId) {
         ManualRequest storage req = manualRequests[_requestId];
         require(req.id != 0, "Request not found");
         require(req.status == RequestStatus.Pending, "Not pending");
@@ -651,7 +653,7 @@ contract RestaurantLoyaltySystem is
         emit ManualRequestProcessed(_requestId, true, msg.sender, block.timestamp);
     }
 
-    function rejectManualRequest(uint256 _requestId, string calldata _reason) external onlyAdmin {
+    function rejectManualRequest(uint256 _requestId, string calldata _reason, uint256 _branchId) external onlyAdmin(_branchId) {
         ManualRequest storage req = manualRequests[_requestId];
         require(req.id != 0, "Request not found");
         require(req.status == RequestStatus.Pending, "Not pending");
@@ -733,7 +735,7 @@ contract RestaurantLoyaltySystem is
         bytes32 idempotencyKey,
         bytes32 refId,
         uint256 branchId
-    ) external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE) nonReentrant whenNotPaused {
+    ) external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE,branchId) nonReentrant whenNotPaused {
         require(customer != address(0), "Invalid customer");
         require(inputAmount > 0, "Amount must be > 0");
         require(idempotencyKey != bytes32(0), "Idempotency key required");
@@ -772,7 +774,7 @@ contract RestaurantLoyaltySystem is
         bytes32 refId,
         uint256 branchId,
         bytes32 source // NET_MODULE, FOOD_MODULE, hoặc custom source để phân loại giao dịch (ví dụ: EVENT_INVOICE_PAYMENT)
-    ) external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE) nonReentrant whenNotPaused returns (uint256 spentA, uint256 spentB) {
+    ) external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE,branchId) nonReentrant whenNotPaused returns (uint256 spentA, uint256 spentB) {
         require(customer != address(0), "Invalid customer");
         require(amount > 0, "Amount must be > 0");
         require(!members[customer].isLocked, "Account is locked");
@@ -834,7 +836,7 @@ contract RestaurantLoyaltySystem is
         bytes32 sourceEventId,
         uint256 _branchId,
         bytes32 source // NET_MODULE, FOOD_MODULE, hoặc custom source để phân loại giao dịch (ví dụ: EVENT_INVOICE_PAYMENT)
-    ) onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE) external nonReentrant whenNotPaused {
+    ) onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE,_branchId) external nonReentrant whenNotPaused {
         require(manualGrantEnabled, "Manual grant is disabled");
         
         require(customer != address(0), "Invalid customer");
@@ -850,7 +852,7 @@ contract RestaurantLoyaltySystem is
     // ================================================================
 
     function creditAssist(address customer, uint256 inputAmount, bytes32 idempotencyKey, bytes32 refId, uint256 _branchId, bytes32 source)
-        external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE) nonReentrant whenNotPaused
+        external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE,_branchId) nonReentrant whenNotPaused
     {
         require(members[customer].isActive, "Customer is not a member");
         uint256 tokenA = _calcTokenA(inputAmount);
@@ -862,7 +864,7 @@ contract RestaurantLoyaltySystem is
     }
 
     function debitAAssist(address customer, uint256 amount, bytes32 actionType, bytes32 refId, uint256 _branchId, bytes32 source)
-        external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE) nonReentrant whenNotPaused
+        external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE,_branchId) nonReentrant whenNotPaused
     {
         require(members[customer].isActive, "Customer is not a member");
         _debitA(customer, amount, actionType, refId,_branchId);
@@ -871,7 +873,7 @@ contract RestaurantLoyaltySystem is
     }
 
     function debitBAssist(address customer, uint256 amount, bytes32 actionType, bytes32 refId, uint256 _branchId, bytes32 source)
-        external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE) nonReentrant whenNotPaused
+        external onlyStaffWithRoleOrAdmin(STAFF_ROLE.FINANCE,_branchId) nonReentrant whenNotPaused
     {
         require(members[customer].isActive, "Customer is not a member");
         _requireActionAllowedForB(actionType);
@@ -885,7 +887,7 @@ contract RestaurantLoyaltySystem is
     // POLICY CONFIG
     // ================================================================
 
-    function setTopupPolicy(uint256 rate, uint256 minTopup, uint256 maxTopup) external onlyAdmin {
+    function setTopupPolicy(uint256 rate, uint256 minTopup, uint256 maxTopup, uint256 _branchId) external onlyAdmin(_branchId) {
         require(rate > 0, "Invalid rate");
         if (maxTopup > 0) require(maxTopup >= minTopup, "Invalid range");
         topupRate = rate; topupMin = minTopup; topupMax = maxTopup;
@@ -893,8 +895,8 @@ contract RestaurantLoyaltySystem is
         emit TopupPolicyUpdated(rate, minTopup, maxTopup);
     }
 
-    function setSpendPolicy(uint8 priority, uint256 maxPercent, uint256 maxAbsolute, uint256 expiryDays)
-        external onlyAdmin
+    function setSpendPolicy(uint8 priority, uint256 maxPercent, uint256 maxAbsolute, uint256 expiryDays, uint256 _branchId)
+        external onlyAdmin(_branchId)
     {
         require(priority <= 2, "Invalid priority");
         require(maxPercent <= 100, "Percent 0-100");
@@ -906,7 +908,7 @@ contract RestaurantLoyaltySystem is
         emit SpendPolicyUpdated(priority, maxPercent, maxAbsolute, expiryDays);
     }
 
-    function setAllowedActionTypes(bytes32[] calldata types, bool[] calldata allowed) external onlyAdmin {
+    function setAllowedActionTypes(bytes32[] calldata types, bool[] calldata allowed, uint256 _branchId) external onlyAdmin(_branchId) {
         require(types.length == allowed.length, "Length mismatch");
         for (uint256 i = 0; i < allowedActionTypeList.length; i++)
             allowedActionTypes[allowedActionTypeList[i]] = false;
@@ -922,7 +924,7 @@ contract RestaurantLoyaltySystem is
     // TIER CONFIG
     // ================================================================
 
-    function setTierEnabled(bool _enabled) external onlyAdmin {
+    function setTierEnabled(bool _enabled, uint256 _branchId) external onlyAdmin(_branchId) {
         tierEnabled = _enabled;
         emit TierEnabledSet(msg.sender, _enabled, block.timestamp);
     }
@@ -934,8 +936,9 @@ contract RestaurantLoyaltySystem is
         uint256 _campaignMultiplier,
         uint256 _rewardCapPercentBonus,
         uint256 _rewardCapAbsoluteBonus,
-        string  calldata _colour
-    ) external onlyAdmin {
+        string  calldata _colour,
+        uint256 _branchId
+    ) external onlyAdmin(_branchId) {
         require(bytes(_name).length > 0, "Name required");
         require(_campaignMultiplier >= 100, "Multiplier min 100");
         require(tierIdByName[_name] == bytes32(0), "Name duplicate");
@@ -971,8 +974,9 @@ contract RestaurantLoyaltySystem is
         uint256 _campaignMultiplier,
         uint256 _rewardCapPercentBonus,
         uint256 _rewardCapAbsoluteBonus,
-        string  calldata _colour
-    ) external onlyAdmin {
+        string  calldata _colour,
+        uint256 _branchId
+    ) external onlyAdmin(_branchId) {
         require(tierConfigs[_tierId].id != bytes32(0), "Tier not found");
         require(_campaignMultiplier >= 100, "Multiplier min 100");
         require(_rewardCapPercentBonus <= 100, "Cap percent max 100");
@@ -1000,7 +1004,7 @@ contract RestaurantLoyaltySystem is
         emit TierDefined(_tierId, tier.name, tier.pointsRequired, _tokenBBonusPercent, _campaignMultiplier, _rewardCapPercentBonus, _rewardCapAbsoluteBonus, msg.sender, block.timestamp);
     }
 
-    function deleteTier(bytes32 _tierId) external onlyAdmin {
+    function deleteTier(bytes32 _tierId, uint256 _branchId) external onlyAdmin(_branchId) {
         require(tierConfigs[_tierId].id != bytes32(0), "Tier not found");
         // NEW: lưu change history trước khi xoá
         _recordChange(ChangeType.TierDeleted, abi.encode(_tierId, tierConfigs[_tierId].name));
@@ -1017,7 +1021,7 @@ contract RestaurantLoyaltySystem is
     // TIER ASSIGNMENT
     // ================================================================
 
-    function setTier(address customer, bytes32 tierId, bytes32 refId) external onlyAdmin {
+    function setTier(address customer, bytes32 tierId, bytes32 refId, uint256 _branchId) external onlyAdmin(_branchId) {
         require(customer != address(0), "Invalid customer");
         if (tierId != bytes32(0)) require(tierConfigs[tierId].id != bytes32(0), "Tier not found");
         bytes32 old = customerTier[customer];
@@ -1029,7 +1033,7 @@ contract RestaurantLoyaltySystem is
         emit CustomerTierChanged(customer, old, tierId, msg.sender, refId, block.timestamp);
     }
 
-    function setTierForBatch(address[] calldata customers, bytes32 tierId, bytes32 refId) external onlyAdmin {
+    function setTierForBatch(address[] calldata customers, bytes32 tierId, bytes32 refId, uint256 _branchId) external onlyAdmin(_branchId) {
         require(customers.length > 0, "Empty list");
         if (tierId != bytes32(0)) require(tierConfigs[tierId].id != bytes32(0), "Tier not found");
         for (uint256 i = 0; i < customers.length; i++) {
@@ -1045,55 +1049,62 @@ contract RestaurantLoyaltySystem is
     // ================================================================
     // CAMPAIGN CRUD
     // ================================================================
+struct CreateCampaignInput {
+    string    name;
+    bytes32   eventType;
+    uint256   minAmount;
+    uint256   rewardAmount;
+    bool      isPercent;
+    uint256   branchScope;
+    uint256   exclusiveGroup;
+    uint256   priority;
+    bool      stackable;
+    uint256   expiresAt;
+    bytes32   minTierID;
+    bytes32[] allowedTiers;
+    uint256   rewardExpiryDaysOverride;
+}
+function createCampaign(
+    CreateCampaignInput calldata input,
+    uint256 _branchId
+) external onlyAdmin(_branchId) returns (uint256 campaignId) {
+    require(bytes(input.name).length > 0, "Name required");
+    require(input.eventType != bytes32(0), "Event type required");
+    require(input.rewardAmount > 0, "Reward must be > 0");
+    if (input.isPercent) require(input.rewardAmount <= 100, "Percent max 100");
 
-   function createCampaign(
-        string    calldata name,
-        bytes32   eventType,
-        uint256   minAmount,
-        uint256   rewardAmount,
-        bool      isPercent,
-        uint256   branchScope,
-        uint256   exclusiveGroup,
-        uint256   priority,
-        bool      stackable,
-        uint256   expiresAt,
-        bytes32   minTierID,
-        bytes32[] calldata allowedTiers,
-        uint256   rewardExpiryDaysOverride  // [FIX-5] 0 = dùng default
-    ) external onlyAdmin returns (uint256 campaignId) {
-        require(bytes(name).length > 0, "Name required");
-        require(eventType != bytes32(0), "Event type required");
-        require(rewardAmount > 0, "Reward must be > 0");
-        if (isPercent) require(rewardAmount <= 100, "Percent max 100");
+    _validateTierFilter(input.minTierID, input.allowedTiers);
 
-        // [FIX-10] Validate tier IDs
-        _validateTierFilter(minTierID, allowedTiers);
+    _campaignCounter++;
+    campaignId = _campaignCounter;
 
-        _campaignCounter++;
-        campaignId = _campaignCounter;
+    campaigns[campaignId] = EconomyTypes.Campaign({
+        id:                      campaignId,
+        name:                    input.name,
+        eventType:               input.eventType,
+        minAmount:               input.minAmount,
+        rewardAmount:            input.rewardAmount,
+        isPercent:               input.isPercent,
+        branchScope:             input.branchScope,
+        exclusiveGroup:          input.exclusiveGroup,
+        priority:                input.priority,
+        stackable:               input.stackable,
+        active:                  true,
+        expiresAt:               input.expiresAt,
+        minTierID:               input.minTierID,
+        allowedTiers:            input.allowedTiers,
+        rewardExpiryDaysOverride: input.rewardExpiryDaysOverride
+    });
 
-        campaigns[campaignId] = EconomyTypes.Campaign({
-            id: campaignId,
-            name: name,
-            eventType: eventType,
-            minAmount: minAmount,
-            rewardAmount: rewardAmount,
-            isPercent: isPercent,
-            branchScope: branchScope,
-            exclusiveGroup: exclusiveGroup,
-            priority: priority,
-            stackable: stackable,
-            active: true,
-            expiresAt: expiresAt,
-            minTierID: minTierID,
-            allowedTiers: allowedTiers,
-            rewardExpiryDaysOverride: rewardExpiryDaysOverride  // [FIX-5]
-        });
-        campaignIds.push(campaignId);
-        _recordChange(ChangeType.CampaignCreated, abi.encode(campaignId, name, eventType, rewardAmount, isPercent, expiresAt));
-        emit CampaignCreated(campaignId, name, eventType, rewardAmount, isPercent, minTierID);
-    }
-
+    campaignIds.push(campaignId);
+    _recordChange(
+        ChangeType.CampaignCreated,
+        abi.encode(campaignId, input.name, input.eventType, 
+                   input.rewardAmount, input.isPercent, input.expiresAt)
+    );
+    emit CampaignCreated(campaignId, input.name, input.eventType,
+                         input.rewardAmount, input.isPercent, input.minTierID);
+}
     function updateCampaign(
         uint256   campaignId,
         uint256   rewardAmount,
@@ -1101,8 +1112,9 @@ contract RestaurantLoyaltySystem is
         uint256   expiresAt,
         bytes32   minTierID,
         bytes32[] calldata allowedTiers,
-        uint256   rewardExpiryDaysOverride  // [FIX-5]
-    ) external onlyAdmin {
+        uint256   rewardExpiryDaysOverride,  // [FIX-5]
+        uint256 _branchId
+    ) external onlyAdmin(_branchId) {
         require(campaigns[campaignId].id != 0, "Campaign not found");
         require(rewardAmount > 0, "Reward must be > 0");
         if (isPercent) require(rewardAmount <= 100, "Percent max 100");
@@ -1142,13 +1154,13 @@ contract RestaurantLoyaltySystem is
             }
         }
     }
-    function pauseCampaign(uint256 campaignId)  external onlyAdmin { 
+    function pauseCampaign(uint256 campaignId, uint256 _branchId)  external onlyAdmin(_branchId) { 
         require(campaigns[campaignId].id != 0, "Not found"); 
         campaigns[campaignId].active = false; 
         _recordChange(ChangeType.CampaignPaused, abi.encode(campaignId));
         emit CampaignPaused(campaignId);
     }
-    function resumeCampaign(uint256 campaignId) external onlyAdmin { 
+    function resumeCampaign(uint256 campaignId, uint256 _branchId) external onlyAdmin(_branchId) { 
         require(campaigns[campaignId].id != 0, "Not found"); 
         campaigns[campaignId].active = true;  
         _recordChange(ChangeType.CampaignResumed, abi.encode(campaignId)); 
@@ -1159,11 +1171,7 @@ contract RestaurantLoyaltySystem is
     // VIEW
     // ================================================================
 
-    // function getMember(address _member) external onlyStaffOrAdmin view returns (Member memory) {
-    function getMember(address _member) external  view returns (Member memory) {
-
-        console.log("MANAGEMENT lafaaa:",address(MANAGEMENT));
-        require(IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender) ||IManagement(MANAGEMENT).isStaff(msg.sender), "Only staff or admin");
+    function getMember(address _member, uint256 _branchId) external onlyStaffOrAdmin(_branchId) view returns (Member memory) {
 
         return members[_member];
     }
@@ -1182,8 +1190,8 @@ contract RestaurantLoyaltySystem is
         return members[_user].isActive;
     }
 
-    function getAllMembersPagination(uint256 offset, uint256 limit)
-        external onlyStaffOrAdmin view returns (Member[] memory result, uint256 totalCount)
+    function getAllMembersPagination(uint256 _branchId, uint256 offset, uint256 limit)
+        external onlyStaffOrAdmin(_branchId) view returns (Member[] memory result, uint256 totalCount)
     {
         uint256 len = allMembers.length;
         if (offset >= len) return (new Member[](0), len);
@@ -1289,8 +1297,8 @@ contract RestaurantLoyaltySystem is
     // ================================================================
     // ADMIN
     // ================================================================
-    function pause()   external onlyAdmin { _pause(); }
-    function unpause() external onlyAdmin { _unpause(); }
+    function pause(uint256 _branchId)   external onlyAdmin(_branchId) { _pause(); }
+    function unpause(uint256 _branchId) external onlyAdmin(_branchId) { _unpause(); }
 
     // ================================================================
     // INTERNAL — Token A
@@ -1685,7 +1693,7 @@ contract RestaurantLoyaltySystem is
         uint256 _orderAmount,
         uint256 branchId
     ) external memberExists(_member) notLocked(_member) {
-        require(isOrder[msg.sender]|| IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender), "Unauthorized");
+        require(isOrder[msg.sender]|| IManagement(mManagement[branchId]).hasRole(ROLE_ADMIN, msg.sender), "Unauthorized");
         
         Member storage member = members[_member];
         require(balanceOf(_member) >= _pointsToUse, "Insufficient points");
@@ -1833,10 +1841,10 @@ contract RestaurantLoyaltySystem is
     }
 
     /// @notice Customer đọc debit history của chính mình
-    function getMyDebitRefs(uint256 offset, uint256 limit)
+    function getMyDebitRefs(uint256 offset, uint256 limit,uint branchId)
         external view returns (bytes32[] memory refs, uint256 total)
     {
-        return getDebitRefsByCustomerPaging(msg.sender, offset, limit);
+        return getDebitRefsByCustomerPaging(msg.sender, offset, limit, branchId);
     }
      // Paginated ledger helpers (used by self-only APIs)
     function _getLedgerAPaged(address customer, uint256 offset, uint256 limit)
@@ -1870,23 +1878,23 @@ contract RestaurantLoyaltySystem is
         return debitByRefId[refId];
     }
 
-    function getDebitRefsByCustomer(address customer) external view returns (bytes32[] memory) {
+    function getDebitRefsByCustomer(address customer,uint branchId) external view returns (bytes32[] memory) {
         require(
             msg.sender == customer ||
-            IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender) ||
-            IManagement(MANAGEMENT).isStaff(msg.sender),
+            IManagement(mManagement[branchId]).hasRole(ROLE_ADMIN, msg.sender) ||
+            IManagement(mManagement[branchId]).isStaff(msg.sender),
             "Access denied"
         );
         return customerDebitRefs[customer];
     }
 
-    function getDebitRefsByCustomerPaging(address customer, uint256 offset, uint256 limit)
+    function getDebitRefsByCustomerPaging(address customer, uint256 offset, uint256 limit,uint branchId)
         public view returns (bytes32[] memory refs, uint256 total)
     {
         require(
             msg.sender == customer ||
-            IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender) ||
-            IManagement(MANAGEMENT).isStaff(msg.sender),
+            IManagement(mManagement[branchId]).hasRole(ROLE_ADMIN, msg.sender) ||
+            IManagement(mManagement[branchId]).isStaff(msg.sender),
             "Access denied"
         );
         bytes32[] storage arr = customerDebitRefs[customer];
@@ -2130,13 +2138,13 @@ function getMemberTransactionsPagination(
     /**
      * @notice Lấy danh sách execution log theo customer (paginated).
      */
-    function getCampaignExecLogByCustomer(address customer, uint256 offset, uint256 limit)
+    function getCampaignExecLogByCustomer(address customer, uint256 offset, uint256 limit,uint branchId)
         external view returns (CampaignExecRecord[] memory result, uint256 total)
     {
         require(
             msg.sender == customer ||
-            IManagement(MANAGEMENT).hasRole(ROLE_ADMIN, msg.sender) ||
-            IManagement(MANAGEMENT).isStaff(msg.sender),
+            IManagement(mManagement[branchId]).hasRole(ROLE_ADMIN, msg.sender) ||
+            IManagement(mManagement[branchId]).isStaff(msg.sender),
             "Access denied"
         );
         uint256[] storage ids = customerExecIds[customer];
@@ -2151,8 +2159,8 @@ function getMemberTransactionsPagination(
     /**
      * @notice Tất cả exec log (paginated) — admin/staff only.
      */
-    function getAllCampaignExecLogs(uint256 offset, uint256 limit)
-        external onlyStaffOrAdmin view returns (CampaignExecRecord[] memory result, uint256 total)
+    function getAllCampaignExecLogs(uint256 _branchId, uint256 offset, uint256 limit)
+        external onlyStaffOrAdmin(_branchId) view returns (CampaignExecRecord[] memory result, uint256 total)
     {
         total = allExecIds.length;
         if (offset >= total) return (new CampaignExecRecord[](0), total);
@@ -2169,8 +2177,8 @@ function getMemberTransactionsPagination(
     /**
      * @notice Lấy toàn bộ change history (paginated, mới nhất trước).
      */
-    function getChangeHistory(uint256 offset, uint256 limit)
-        external onlyStaffOrAdmin view returns (ChangeRecord[] memory result, uint256 total)
+    function getChangeHistory(uint256 _branchId, uint256 offset, uint256 limit)
+        external onlyStaffOrAdmin(_branchId) view returns (ChangeRecord[] memory result, uint256 total)
     {
         total = changeHistory.length;
         if (offset >= total) return (new ChangeRecord[](0), total);
@@ -2183,8 +2191,8 @@ function getMemberTransactionsPagination(
     /**
      * @notice Lấy change history theo loại (TopupPolicy, TierCreated, ...).
      */
-    function getChangeHistoryByType(ChangeType changeType, uint256 offset, uint256 limit)
-        external onlyStaffOrAdmin view returns (ChangeRecord[] memory result, uint256 total)
+    function getChangeHistoryByType(uint256 _branchId,ChangeType changeType, uint256 offset, uint256 limit)
+        external onlyStaffOrAdmin(_branchId) view returns (ChangeRecord[] memory result, uint256 total)
     {
         uint256[] storage ids = changeIdsByType[uint8(changeType)];
         total = ids.length;

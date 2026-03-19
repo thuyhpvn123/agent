@@ -172,7 +172,7 @@ contract RestaurantTest is Test {
         TIMEKEEPING.setManagement(address(MANAGEMENT));
         //
         MANAGEMENT.setPoints(address(POINTS));
-        POINTS.setManagementSC(address(MANAGEMENT));
+        POINTS.setManagementSC(address(MANAGEMENT),1);
         POINTS.setOrder(address(ORDER),1);
         POINTS.setSearchIndex(address(publicfullDBMock));
         ORDER.setPointSC(address(POINTS));
@@ -650,9 +650,9 @@ contract RestaurantTest is Test {
     function SetUpDiscount()public{
         vm.startPrank(admin);
          
-        bytes32 memberGroupId = POINTS.createMemberGroup("khach hang than thiet");
+        bytes32 memberGroupId = POINTS.createMemberGroup("khach hang than thiet",1);
         // (string memory namePoint,,,,,) = POINTS.getPointsInfo();
-        POINTS.updateMemberGroup(memberGroupId,"nhom2",true);
+        POINTS.updateMemberGroup(memberGroupId,"nhom2",true,1);
         MemberGroup[] memory memberGroups = POINTS.getAllGroups();
         assertEq(memberGroups[0].name,"nhom2","should be equal");
         bytes32[] memory _targetGroupIds = new bytes32[](1);
@@ -1136,7 +1136,8 @@ contract RestaurantTest is Test {
             0,                            // expiresAt (no expiry)
             bytes32(0),                   // minTierID
             allowedTiers,
-            100
+            100,
+            1
         );
         eventIdArr11.push(eventId11);
         vm.stopPrank();
@@ -1514,7 +1515,8 @@ contract RestaurantTest is Test {
     bytesCodeCall = abi.encodeCall(
     POINTS.createMemberGroup,
         (
-            "khach hang than thiet"
+            "khach hang than thiet",
+            1
         ));
     console.log("POINTS createMemberGroup:");
     console.logBytes(bytesCodeCall);
@@ -1528,7 +1530,8 @@ contract RestaurantTest is Test {
         (
             0xda7c73023306e345b2c4351e72ee4d7fa304c38819cff86e08f3a35fac2b47b4,
             "Nhom 22",
-            true
+            true,
+            1
         ));
     console.log("POINTS updateMemberGroup:");
     console.logBytes(bytesCodeCall);
@@ -1538,7 +1541,7 @@ contract RestaurantTest is Test {
     //POINTS.setManagementSC(address(MANAGEMENT));
     bytesCodeCall = abi.encodeCall(
     POINTS.setManagementSC,
-        (address(MANAGEMENT)));
+        (address(MANAGEMENT),1));
     console.log("POINTS setManagementSC:");
     console.logBytes(bytesCodeCall);
     console.log(

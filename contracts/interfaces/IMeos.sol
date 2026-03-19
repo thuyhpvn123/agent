@@ -19,6 +19,7 @@ interface INetCafeUser {
     function initialize(address _staffContract) external;
     function transferOwnership(address newOwner) external ;
     function setModule(address module, bool allowed) external;
+    function setSessionContract(address _session) external;
 }
 interface INetCafeSession {
     function initialize(
@@ -27,11 +28,13 @@ interface INetCafeSession {
     ) external;
     function transferOwnership(address newOwner) external ;
     function setModule(address module, bool allowed) external;
+    
 }
 interface INetCafeTopUp {
     function initialize(address _staffContract, address _userContract) external;
     function transferOwnership(address newOwner) external ;
     function isValidAmount(bytes32 paymentId,uint amount) view external returns(bool);
+    function setSessionContract(address _session) external;
 }
 interface INetCafeSpend {
     function initialize(

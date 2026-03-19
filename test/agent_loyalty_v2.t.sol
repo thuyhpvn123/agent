@@ -82,7 +82,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     bytes32 optionId11;
     bytes32[] public selectedFeatureIdsDish11; //3 muc do cay cua dish1_code
     address FULL_DB = 0x0000000000000000000000000000000000000106;
-
+    uint256 branchIdAgent21;
     constructor() {
         // Setup accounts
 
@@ -630,7 +630,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         
         // Freeze the loyalty contract
         vm.prank(agent1);
-        RestaurantLoyaltySystem(loyaltyContract).pause();
+        RestaurantLoyaltySystem(loyaltyContract).pause(branchIdAgent21);
         
         // Now deletion should succeed
         vm.prank(superAdmin);
@@ -1239,6 +1239,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         uint256[] memory ids = enhanced.getAgentBranchIds(agent1);
         console.log("ids.length:",ids.length);
         //Order:
+        branchIdAgent21 = branchIds2[0];
         address iqrAgentAdd = iqrFactory.getAgentIQRContract(agent2,branchIds2[0]);
         IQRContracts memory iQRContracts = IAgentIQR(iqrAgentAdd).getIQRSCByAgent(agent2,branchIds2[0]);
         console.log("(iQRContracts.Management:",iQRContracts.Management);
@@ -1251,8 +1252,8 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         RestaurantLoyaltySystem Points = RestaurantLoyaltySystem(iQRContracts.Points);
         console.log("Points:",address(Points));
         vm.startPrank(agent2);
-        bytes32 memberGroupId = Points.createMemberGroup("khach hang than thiet");
-        Points.updateMemberGroup(memberGroupId,"nhom22",true);
+        bytes32 memberGroupId = Points.createMemberGroup("khach hang than thiet",branchIdAgent21);
+        Points.updateMemberGroup(memberGroupId,"nhom22",true,branchIdAgent21);
         vm.stopPrank();
         MemberGroup[] memory memberGroups = Points.getAllGroups();
         console.log("memberGroups[0].name:",memberGroups[0].name);
@@ -1674,7 +1675,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
 
         vm.warp(currentTime);
         vm.prank(agent2);
-        Points.updateExchangeRate(1);
+        Points.updateExchangeRate(1,branchIdAgent21);
         vm.startPrank(customer1);
         //register member
         RegisterInPut memory input = RegisterInPut({
@@ -1756,7 +1757,7 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
         order.confirmPayment(tableId,payment.id,"paid");
         Points.earnTokenA(customer1, payment.foodCharge-payment.discountAmount, payment.id, payment.id,EconomyTypes.EVENT_FOOD_PAID,5,false);
         
-        Member memory member = Points.getMember(customer1);
+        Member memory member = Points.getMember(customer1,branchIdAgent21);
         console.log("Points after first purchase:", member.totalPoints);
         assertEq(member.totalPoints, 2);
         vm.stopPrank();

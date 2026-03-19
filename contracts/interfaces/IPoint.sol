@@ -237,7 +237,7 @@ interface IPoint {
         address _agent,
         address _enhancedAgentSC
     ) external;
-    function setManagementSC(address _management)external;
+    function setManagementSC(address _management,uint256 branchId)external;
     // function setOrder(address _order)external;
     function setOrder(address _order,uint256 branchId)external;
     function setTopUp(address _topup,uint256 branchId)external;
