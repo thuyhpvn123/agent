@@ -24,7 +24,8 @@ interface INetCafeUser {
 interface INetCafeSession {
     function initialize(
         address _staffContract,
-        address _userContract
+        address _userContract,
+        address _managementContract
     ) external;
     function transferOwnership(address newOwner) external ;
     function setModule(address module, bool allowed) external;

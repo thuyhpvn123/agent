@@ -39,7 +39,7 @@ contract NetCafeTopUpV2 is
     // ─────────────────────────────────────────────
 
     struct TopUpRequest {
-        bytes32 id;
+        uint256 id;
         address userWallet;
         string userName;
         uint256 amountVND;
@@ -62,27 +62,28 @@ contract NetCafeTopUpV2 is
     INetCafeSessionV2 public sessionContract;
     PaymentConfig public paymentConfig;
 
-    mapping(bytes32 => TopUpRequest) public topUpRequests;
-    bytes32[] public pendingTopUps;
-    mapping(address => bytes32[]) public topUpHistory;
-    bytes32[] public handledTopUpIds;
+    uint256 private topUpCounter;
+    mapping(uint256 => TopUpRequest) public topUpRequests;
+    uint256[] public pendingTopUps;
+    mapping(address => uint256[]) public topUpHistory;
+    uint256[] public handledTopUpIds;
 
     // ─────────────────────────────────────────────
     //  Events
     // ─────────────────────────────────────────────
 
     event TopUpRequested(
-        bytes32 indexed id,
+        uint256 indexed id,
         address indexed user,
         uint256 amountVND,
         PaymentMethod method
     );
     event TopUpApproved(
-        bytes32 indexed id,
+        uint256 indexed id,
         address indexed user,
         uint256 amountVND
     );
-    event TopUpRejected(bytes32 indexed id, address indexed user);
+    event TopUpRejected(uint256 indexed id, address indexed user);
     event PaymentConfigUpdated(bool allowCash, bool allowBank);
 
     /* =======================
@@ -179,12 +180,9 @@ contract NetCafeTopUpV2 is
         require(userContract.isActive(wallet), "User not found");
         require(amountVND > 0, "Invalid amount");
 
-        bytes32 id = keccak256(
-            abi.encodePacked(wallet, amountVND, block.timestamp)
-        );
-
-        topUpRequests[id] = TopUpRequest({
-            id: id,
+        topUpCounter++;
+        topUpRequests[topUpCounter] = TopUpRequest({
+            id: topUpCounter,
             userWallet: wallet,
             userName: userContract.getDisplayName(wallet),
             amountVND: amountVND,
@@ -195,10 +193,10 @@ contract NetCafeTopUpV2 is
         });
 
         userContract.increaseBalance(wallet, amountVND);
-        topUpHistory[wallet].push(id);
-        handledTopUpIds.push(id);
+        topUpHistory[wallet].push(topUpCounter);
+        handledTopUpIds.push(topUpCounter);
 
-        emit TopUpApproved(id, wallet, amountVND);
+        emit TopUpApproved(topUpCounter, wallet, amountVND);
     }
 
     // ─────────────────────────────────────────────
@@ -221,12 +219,9 @@ contract NetCafeTopUpV2 is
         require(userContract.isActive(userWallet), "User not registered");
         require(amountVND > 0, "Invalid amount");
 
-        bytes32 id = keccak256(
-            abi.encodePacked(userWallet, amountVND, block.timestamp)
-        );
-
-        topUpRequests[id] = TopUpRequest({
-            id: id,
+        topUpCounter++;
+        topUpRequests[topUpCounter] = TopUpRequest({
+            id: topUpCounter,
             userWallet: userWallet,
             userName: userContract.getDisplayName(userWallet),
             amountVND: amountVND,
@@ -236,15 +231,13 @@ contract NetCafeTopUpV2 is
             handledAt: 0
         });
 
-        pendingTopUps.push(id);
-
-        emit TopUpRequested(id, userWallet, amountVND, method);
+        pendingTopUps.push(topUpCounter);
+        emit TopUpRequested(topUpCounter, userWallet, amountVND, method);
     }
 
-    function approveTopUp(bytes32 id) external onlyFinanceStaff {
+    function approveTopUp(uint256 id) external onlyFinanceStaff {
         TopUpRequest storage req = topUpRequests[id];
-        require(req.id != bytes32(0), "Not found");
-        require(req.status == TopUpStatus.PENDING, "Handled");
+        require(req.status == TopUpStatus.PENDING, "Already handled");
 
         req.status = TopUpStatus.APPROVED;
         req.handledAt = block.timestamp;
@@ -252,15 +245,14 @@ contract NetCafeTopUpV2 is
         userContract.increaseBalance(req.userWallet, req.amountVND);
         topUpHistory[req.userWallet].push(id);
         handledTopUpIds.push(id);
+        _removePending(id);
 
         emit TopUpApproved(id, req.userWallet, req.amountVND);
-        _removePending(id);
     }
 
-    function rejectTopUp(bytes32 id) external onlyFinanceStaff {
+    function rejectTopUp(uint256 id) external onlyFinanceStaff {
         TopUpRequest storage req = topUpRequests[id];
-        require(req.id != bytes32(0), "Not found");
-        require(req.status == TopUpStatus.PENDING, "Handled");
+        require(req.status == TopUpStatus.PENDING, "Already handled");
 
         req.status = TopUpStatus.REJECTED;
         req.handledAt = block.timestamp;
@@ -274,21 +266,26 @@ contract NetCafeTopUpV2 is
     //  Validate helper
     // ─────────────────────────────────────────────
 
-    function isValidAmount(
-        bytes32 paymentId,
+    function _isValidAmountDeposit(
+        uint256 paymentId,
         uint256 amount
     ) external view returns (bool isValid, string memory message) {
-        if (topUpRequests[paymentId].id == bytes32(0))
+        if (topUpRequests[paymentId].id == 0) {
             return (false, "TopUp request not found");
-
+        }
         TopUpRequest storage req = topUpRequests[paymentId];
-        if (req.amountVND != amount) return (false, "Amount does not match");
-        if (req.status == TopUpStatus.APPROVED)
+        if (req.amountVND != amount) {
+            return (false, "Amount does not match");
+        }
+        if (req.status == TopUpStatus.APPROVED) {
             return (true, "TopUp already approved");
-        if (req.status == TopUpStatus.REJECTED)
+        }
+        if (req.status == TopUpStatus.REJECTED) {
             return (false, "TopUp was rejected");
-        if (req.status == TopUpStatus.PENDING)
+        }
+        if (req.status == TopUpStatus.PENDING) {
             return (false, "TopUp is still pending");
+        }
         return (false, "Unknown status");
     }
 
@@ -296,7 +293,7 @@ contract NetCafeTopUpV2 is
     //  Query / Pagination
     // ─────────────────────────────────────────────
 
-    function getPendingTopUps() external view returns (bytes32[] memory) {
+    function getPendingTopUps() external view returns (uint256[] memory) {
         return pendingTopUps;
     }
 
@@ -335,21 +332,23 @@ contract NetCafeTopUpV2 is
         uint256 offset,
         uint256 limit
     ) external view returns (TopUpRequest[] memory, uint256 total) {
-        bytes32[] storage history = topUpHistory[wallet];
+        uint256[] storage history = topUpHistory[wallet];
         total = history.length;
         if (offset >= total) return (new TopUpRequest[](0), total);
-        uint256 end = offset + limit > total ? total : offset + limit;
+        uint256 end = offset + limit;
+        if (end > total) end = total;
         TopUpRequest[] memory list = new TopUpRequest[](end - offset);
         for (uint256 i = offset; i < end; i++) {
             list[i - offset] = topUpRequests[history[i]];
         }
         return (list, total);
     }
+
     // ─────────────────────────────────────────────
     //  Internal
     // ─────────────────────────────────────────────
 
-    function _removePending(bytes32 id) internal {
+    function _removePending(uint256 id) internal {
         uint256 len = pendingTopUps.length;
         for (uint256 i = 0; i < len; i++) {
             if (pendingTopUps[i] == id) {

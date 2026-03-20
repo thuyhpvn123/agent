@@ -1123,22 +1123,38 @@ contract RestaurantTest is Test {
         uint startTime = currentTime;
         uint endTime = startTime + 180 days;
         bytes32[] memory allowedTiers = new bytes32[](0);
-        eventId11 = POINTS.createCampaign(
-            "Tang new member",
-            EconomyTypes.EVENT_FOOD_PAID, // eventType
-            0,                            // minAmount
-            10,                           // rewardAmount (10%)
-            true,                         // isPercent
-            0,                            // branchScope (all)
-            0,                            // exclusiveGroup
-            1,                            // priority
-            true,                         // stackable
-            0,                            // expiresAt (no expiry)
-            bytes32(0),                   // minTierID
-            allowedTiers,
-            100,
-            1
-        );
+        // eventId11 = POINTS.createCampaign(
+        //     "Tang new member",
+        //     EconomyTypes.EVENT_FOOD_PAID, // eventType
+        //     0,                            // minAmount
+        //     10,                           // rewardAmount (10%)
+        //     true,                         // isPercent
+        //     0,                            // branchScope (all)
+        //     0,                            // exclusiveGroup
+        //     1,                            // priority
+        //     true,                         // stackable
+        //     0,                            // expiresAt (no expiry)
+        //     bytes32(0),                   // minTierID
+        //     allowedTiers,
+        //     100,
+        //     1
+        // );
+        CreateCampaignInput memory input = CreateCampaignInput({
+            name: "Tang new member",
+            eventType: EconomyTypes.EVENT_FOOD_PAID, // eventType
+            minAmount: 0,                            // minAmount
+            rewardAmount: 10,                           // rewardAmount (10%)
+            isPercent: true,                         // isPercent
+            branchScope: 0,                            // branchScope (all)
+            exclusiveGroup: 0,                            // exclusiveGroup
+            priority: 1,                            // priority
+            stackable: true,                         // stackable
+            expiresAt: 0,                            // expiresAt (no expiry)
+            minTierID: bytes32(0),                   // minTierID
+            allowedTiers: allowedTiers,
+            rewardExpiryDaysOverride: 100
+        });
+        eventId11 = POINTS.createCampaign(input,1);
         eventIdArr11.push(eventId11);
         vm.stopPrank();
     }

@@ -381,20 +381,6 @@ contract NetCafeUserV2 is
     function setSessionContract(address _session) external onlyOwner {
         sessionContract = INetCafeSessionV2(_session);
     }
-    function getUserStatus(
-        address wallet
-    )
-        external
-        view
-        returns (
-            bool active,
-            bool online,
-            uint256 lastLoginAt,
-            uint256 balanceVND
-        )
-    {
-        User storage u = users[wallet];
-        return (u.active, u.online, u.lastLoginAt, u.balanceVND);
-    }
+
     uint256[50] private __gap;
 }

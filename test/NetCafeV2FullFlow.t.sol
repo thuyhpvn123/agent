@@ -68,8 +68,18 @@ contract NetCafeV2FullFlowTest is Test {
         user_IMP.initialize(address(StaffMeosSC_IMP));
         user = NetCafeUserV2(address(user_IMP));
 
+        management_IMP = new NetCafeManagementV2();
+        management_IMP.initialize(address(StaffMeosSC_IMP));
+        // ERC1967Proxy NetCafeManagement_PROXY = new ERC1967Proxy(
+        //     address(management_IMP),
+        //     abi.encodeWithSelector(INetCafeManagement.initialize.selector,
+        //     address(StaffMeosSC_PROXY))
+        // );
+        managementMeos = NetCafeManagementV2(address(management_IMP));
+
+
         session_IMP = new NetCafeSessionV2();
-        session_IMP.initialize(address(StaffMeosSC_IMP), address(user_IMP));
+        session_IMP.initialize(address(StaffMeosSC_IMP), address(user_IMP),address(management_IMP));
         // ERC1967Proxy NetCafeSession_PROXY = new ERC1967Proxy(
         //     address(session_IMP),
         //     abi.encodeWithSelector(INetCafeSession.initialize.selector,
@@ -108,14 +118,6 @@ contract NetCafeV2FullFlowTest is Test {
         // );
         spend = NetCafeSpendV2(address(spend_IMP));
 
-        management_IMP = new NetCafeManagementV2();
-        management_IMP.initialize(address(StaffMeosSC_IMP));
-        // ERC1967Proxy NetCafeManagement_PROXY = new ERC1967Proxy(
-        //     address(management_IMP),
-        //     abi.encodeWithSelector(INetCafeManagement.initialize.selector,
-        //     address(StaffMeosSC_PROXY))
-        // );
-        managementMeos = NetCafeManagementV2(address(management_IMP));
 
         station_IMP = new NetCafeStationV2();
         station_IMP.initialize(
@@ -338,7 +340,7 @@ contract NetCafeV2FullFlowTest is Test {
 
         // Finance duyet nap
         vm.prank(staff4);
-        topup.approveTopUp(1);
+        topup.approveTopUp((keccak256(abi.encodePacked("1"))));
 
         // So du tang len
         (, , , uint256 balanceAfterTopup) = user.getUserStatus(

@@ -1049,21 +1049,7 @@ contract RestaurantLoyaltySystem is
     // ================================================================
     // CAMPAIGN CRUD
     // ================================================================
-struct CreateCampaignInput {
-    string    name;
-    bytes32   eventType;
-    uint256   minAmount;
-    uint256   rewardAmount;
-    bool      isPercent;
-    uint256   branchScope;
-    uint256   exclusiveGroup;
-    uint256   priority;
-    bool      stackable;
-    uint256   expiresAt;
-    bytes32   minTierID;
-    bytes32[] allowedTiers;
-    uint256   rewardExpiryDaysOverride;
-}
+
 function createCampaign(
     CreateCampaignInput calldata input,
     uint256 _branchId

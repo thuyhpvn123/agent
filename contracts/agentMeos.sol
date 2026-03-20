@@ -131,13 +131,22 @@ contract AgentMeos is OwnableUpgradeable {
             StaffMeosSC_PROXY_ADD)
         );
 
+        require(address(NetCafeManagementBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
+        NetCafeManagementBeacon = UpgradeableBeacon(_NetCafeManagementBeacon);
+        BeaconProxy NetCafeManagement_PROXY = new BeaconProxy(
+            address(NetCafeManagementBeacon), 
+            abi.encodeWithSelector(INetCafeManagement.initialize.selector, 
+            StaffMeosSC_PROXY_ADD)
+        );
+
         require(address(NetCafeSessionBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
         NetCafeSessionBeacon = UpgradeableBeacon(_NetCafeSessionBeacon);
         BeaconProxy NetCafeSession_PROXY = new BeaconProxy(
             address(NetCafeSessionBeacon),
             abi.encodeWithSelector(INetCafeSession.initialize.selector,
             StaffMeosSC_PROXY_ADD,
-            address(NetCafeUser_PROXY)
+            address(NetCafeUser_PROXY),
+            address(NetCafeManagement_PROXY)
             )
         );
 
@@ -160,14 +169,6 @@ contract AgentMeos is OwnableUpgradeable {
             address(NetCafeUser_PROXY),
             address(NetCafeSession_PROXY)
             )
-        );
-
-        require(address(NetCafeManagementBeacon) == address(0), "Beacon already created, use upgradeBeacon()");
-        NetCafeManagementBeacon = UpgradeableBeacon(_NetCafeManagementBeacon);
-        BeaconProxy NetCafeManagement_PROXY = new BeaconProxy(
-            address(NetCafeManagementBeacon), 
-            abi.encodeWithSelector(INetCafeManagement.initialize.selector, 
-            StaffMeosSC_PROXY_ADD)
         );
 
         require(address(NetCafeStationBeacon) == address(0), "Beacon already created, use upgradeBeacon()");

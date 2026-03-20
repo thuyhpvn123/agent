@@ -206,7 +206,21 @@ pragma solidity ^0.8.20;
         Staff,      // Nhân viên
         Admin       // Quản trị viên
     }
-    
+    struct CreateCampaignInput {
+        string    name;
+        bytes32   eventType;
+        uint256   minAmount;
+        uint256   rewardAmount;
+        bool      isPercent;
+        uint256   branchScope;
+        uint256   exclusiveGroup;
+        uint256   priority;
+        bool      stackable;
+        uint256   expiresAt;
+        bytes32   minTierID;
+        bytes32[] allowedTiers;
+        uint256   rewardExpiryDaysOverride;
+    }
 interface IPoint {
     function getMemberToGroups(address _member) external view returns (bytes32[] memory);
     function redeemVoucherPoints(address _member, uint256 _pointCost) external;

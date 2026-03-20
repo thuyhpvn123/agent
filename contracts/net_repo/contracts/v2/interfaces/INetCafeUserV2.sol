@@ -38,4 +38,15 @@ interface INetCafeUserV2 {
     function increaseBalance(address wallet, uint256 amount) external;
     function decreaseBalance(address wallet, uint256 amount) external;
     function forceLogout(address wallet) external;
+
+    function getUserBalance(
+        address wallet
+    )
+        external
+        returns (
+            bool active,
+            bool online,
+            uint256 lastLoginAt,
+            uint256 balanceVND
+        );
 }
