@@ -1818,7 +1818,18 @@ contract RestaurantTest is Test {
         // console.log(
         //     "-----------------------------------------------------------------------------"
         // );  
-
+        //RemoveDish
+        bytesCodeCall = abi.encodeCall(
+            MANAGEMENT.RemoveDish,
+            (
+               "bo-bit-tet-2369c802-a600-483b-8426-47ac56e13ffa"
+            )
+        );
+        console.log("CreateCategory 1:");
+        console.logBytes(bytesCodeCall);
+        console.log(
+            "-----------------------------------------------------------------------------"
+        );  
 
 
     }

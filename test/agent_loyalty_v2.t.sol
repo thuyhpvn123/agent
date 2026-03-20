@@ -2386,6 +2386,35 @@ contract AgentManagementIntegrationTest is NetCafeV2FullFlowTest,RestaurantTest,
     console.log(
         "-----------------------------------------------------------------------------"
     );
+    //setAdminMeos
+    bytesCodeCall = abi.encodeCall(
+        meosFactory.setAdminMeos,
+        (
+            0x2d75fB453875fa187B85F43c04E29AB343b2880D,
+            true
+        ));
+    console.log("meosFactory setAdminMeos:");
+    console.logBytes(bytesCodeCall);
+    console.log(
+        "-----------------------------------------------------------------------------"
+    );
+    //upgradeBeaconGlobal
+    bytesCodeCall = abi.encodeCall(
+        meosFactory.upgradeBeaconGlobal,
+        (
+            0x0000000000000000000000000000000000000000,
+            0x0000000000000000000000000000000000000000,
+            0x7bAd57A24B32aFccA09DE42341Dcbaa33c8629A5,
+            0x0000000000000000000000000000000000000000,
+            0x0000000000000000000000000000000000000000,
+            0x0000000000000000000000000000000000000000,
+            0x0000000000000000000000000000000000000000
+        ));
+    console.log("meosFactory upgradeBeaconGlobal:");
+    console.logBytes(bytesCodeCall);
+    console.log(
+        "-----------------------------------------------------------------------------"
+    );
 
     // bytesCodeCall = abi.encodeCall(
     //     meosFactory.setAdminMeos,

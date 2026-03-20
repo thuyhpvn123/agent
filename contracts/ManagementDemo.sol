@@ -993,7 +993,10 @@ contract Management is
         );
     }
     }
-    function RemoveCategory(string memory _code)external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive {
+    function RemoveCategory(string memory _code) external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive {
+        require(bytes(_code).length > 0, "category code can not be empty");
+        require(bytes(mCodeToCat[_code].code).length > 0, "category code does not exist");
+
         if (address(historyTracking) != address(0)) {
             historyTracking.recordCategoryDelete(
                 _code,
@@ -1002,13 +1005,85 @@ contract Management is
             );
         }
 
-        for(uint i;i<categories.length;i++){
-            if(keccak256(abi.encodePacked(categories[i].code ))== keccak256(abi.encodePacked(_code))){
-                categories[i] = categories[categories.length-1];
+        // ✅ Xóa tất cả dish thuộc category này
+        Dish[] storage dishes = mCodeCatToDishes[_code];
+        for (uint i = 0; i < dishes.length; i++) {
+            string memory dishCode = dishes[i].code;
+
+            if (!isCodeExist[dishCode]) continue;
+
+            // Xóa variants + attributes
+            bytes32[] storage variantIds = mDishVariant[dishCode];
+            for (uint j = 0; j < variantIds.length; j++) {
+                delete mVariantAttributes[dishCode][variantIds[j]];
+                delete mVariant[dishCode][variantIds[j]];
+            }
+            delete mDishVariant[dishCode];
+
+            // Xóa dish chính
+            delete mCodeToDish[dishCode];
+            isCodeExist[dishCode] = false;
+            delete dishStartTime[dishCode];
+            delete dishIsNew[dishCode];
+
+            // Xóa khỏi allDishCodes
+            uint256 codeIdx = dishCodeIndex[dishCode];
+            if (codeIdx < allDishCodes.length &&
+                keccak256(abi.encodePacked(allDishCodes[codeIdx])) ==
+                keccak256(abi.encodePacked(dishCode))) {
+
+                uint256 lastCodeIdx = allDishCodes.length - 1;
+                if (codeIdx != lastCodeIdx) {
+                    string memory lastCode = allDishCodes[lastCodeIdx];
+                    allDishCodes[codeIdx] = lastCode;
+                    dishCodeIndex[lastCode] = codeIdx;
+                }
+                allDishCodes.pop();
+                delete dishCodeIndex[dishCode];
+            }
+
+            // Xóa khỏi dishesWithOrder
+            uint256 orderIdx = dishOrderIndex[dishCode];
+            if (orderIdx < dishesWithOrder.length &&
+                keccak256(abi.encodePacked(dishesWithOrder[orderIdx].dish.code)) ==
+                keccak256(abi.encodePacked(dishCode))) {
+
+                uint256 lastOrderIdx = dishesWithOrder.length - 1;
+                if (orderIdx != lastOrderIdx) {
+                    DishWithOrder memory lastItem = dishesWithOrder[lastOrderIdx];
+                    dishesWithOrder[orderIdx] = lastItem;
+                    dishOrderIndex[lastItem.dish.code] = orderIdx;
+                }
+                dishesWithOrder.pop();
+                delete dishOrderIndex[dishCode];
+            }
+
+            // Xóa options liên quan
+            DishOption[] storage dishOptions = mDishCodeToOptions[dishCode];
+            for (uint j = 0; j < dishOptions.length; j++) {
+                bytes32 optionId = dishOptions[j].optionId;
+                _removeDishFromOptionReverse(optionId, dishCode);
+            }
+            delete mDishCodeToOptions[dishCode];
+            delete mDishCodeToOptionNames[dishCode];
+        }
+
+        // Xóa toàn bộ dishes của category
+        delete mCodeCatToDishes[_code];
+        delete mCategoryAttributes[_code];
+        delete isCodeExist[_code];
+
+        // Xóa category khỏi mảng categories
+        for (uint i = 0; i < categories.length; i++) {
+            if (keccak256(abi.encodePacked(categories[i].code)) ==
+                keccak256(abi.encodePacked(_code))) {
+                categories[i] = categories[categories.length - 1];
                 categories.pop();
+                break;
             }
         }
-        delete  mCodeToCat[_code];
+
+        delete mCodeToCat[_code];
     }
 
     function UpdateCategory(
@@ -1156,7 +1231,7 @@ contract Management is
             
             if (!isExisting) {
                 allDishCodes.push(dish.code);
-                dishCodeIndex[dish.code] = allDishCodes.length; // ✅ LƯU INDEX + 1 = 1, 2, 3...
+                dishCodeIndex[dish.code] = allDishCodes.length -1 ;  // 0-based
                 //
                 bytes32 variantId0 = mDishVariant[dish.code][0];
                 DishWithOrder memory dishWithOrder = DishWithOrder({
@@ -1167,7 +1242,7 @@ contract Management is
                     attributes: mVariantAttributes[dish.code][variantId0]
                 });
                 dishesWithOrder.push(dishWithOrder);
-                dishOrderIndex[dish.code] = dishesWithOrder.length - 1; // index + 1
+                dishOrderIndex[dish.code] = dishesWithOrder.length - 1; //  0-based, không +1
             }
         }
         if(optionIds.length > 0){
@@ -1959,33 +2034,42 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
         
         return recentDishes;
     }
-    function UpdateOrderNum (
-        string memory _codeDish,
-        uint orderNumAdd,
-        uint createdAt
-    )external isActive onlyOrder() {
-        require(orderNumAdd >0, "orderNum added can be zero");
-        require(
-            bytes(mCodeToDish[_codeDish].code).length > 0,
-            "can not find dish"
-        );
-        mCodeToDish[_codeDish].orderNum += orderNumAdd;
-        uint day = _getDay(createdAt);
-        uint month = _getMonth(createdAt);
-        if(mDayToDishCode[day][_codeDish] != true){
-            mDayToDishCodeOrder[day].push(_codeDish);
-            mDayToDishCode[day][_codeDish] = true;
-        }
-        
-        if(mDayToDishCode[month][_codeDish] != true){
-            mMonthToDishCodeOrder[month].push(_codeDish);
-            mMonthToDishCode[month][_codeDish] = true;
-        }
-        uint index = dishOrderIndex[_codeDish];
-        require(index < dishesWithOrder.length, "Invalid dish index");
-        dishesWithOrder[index].orderNum += orderNumAdd;
+function UpdateOrderNum(
+    string memory _codeDish,
+    uint orderNumAdd,
+    uint createdAt
+) external isActive onlyOrder() {
+    require(orderNumAdd > 0, "orderNum added can be zero");
+    require(
+        bytes(mCodeToDish[_codeDish].code).length > 0,
+        "can not find dish"
+    );
+
+    mCodeToDish[_codeDish].orderNum += orderNumAdd;
+
+    uint day = _getDay(createdAt);
+    uint month = _getMonth(createdAt);
+
+    if (mDayToDishCode[day][_codeDish] != true) {
+        mDayToDishCodeOrder[day].push(_codeDish);
+        mDayToDishCode[day][_codeDish] = true;
     }
-    //FE cần gọi sau khi gọi executeOrder
+
+    if (mMonthToDishCode[month][_codeDish] != true) {
+        mMonthToDishCodeOrder[month].push(_codeDish);
+        mMonthToDishCode[month][_codeDish] = true;
+    }
+
+    // ✅ FIX: 0-based trực tiếp, không cần -1
+    uint index = dishOrderIndex[_codeDish];
+    require(index < dishesWithOrder.length, "Invalid dish index");
+    require(
+        keccak256(abi.encodePacked(dishesWithOrder[index].dish.code)) ==
+        keccak256(abi.encodePacked(_codeDish)),
+        "Dish index mismatch"
+    );
+    dishesWithOrder[index].orderNum += orderNumAdd;
+}    //FE cần gọi sau khi gọi executeOrder
     function UpdateTotalRevenueReport(uint createdAt, uint addRevenue) external isActive{
         totalRevenueDays.push(ChartTotalRevenue({
             time:createdAt,
@@ -2172,215 +2256,201 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
     return (data, totalRecords, hasMore);
 }
 
-    function UpdateDish(
-        string memory _codeCat,
-        string memory _codeDish,
-        string memory _nameCategory,
-        string memory _name,
-        string memory _des,
-        bool _available,
-        bool _active,
-        string memory _imgUrl,
-        uint _cookingTime,
-        bool _showIngredient,
-        string memory _videoLink,
-        VariantParams[] memory _variants,
-        string[] memory _ingredients
-    )external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive returns(bool){
-        require(bytes(_codeDish).length >0 && bytes(_codeCat).length >0,"dish code and category code can not be empty");
-        require(
-            bytes(mCodeToDish[_codeDish].code).length > 0,
-            "can not find dish"
-        );
-        // require(_variants.length > 0,"Invalid variants length");
+function UpdateDish(
+    string memory _codeCat,
+    string memory _codeDish,
+    string memory _nameCategory,
+    string memory _name,
+    string memory _des,
+    bool _available,
+    bool _active,
+    string memory _imgUrl,
+    uint _cookingTime,
+    bool _showIngredient,
+    string memory _videoLink,
+    VariantParams[] memory _variants,
+    string[] memory _ingredients
+) external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive returns(bool) {
+    require(bytes(_codeDish).length > 0 && bytes(_codeCat).length > 0,
+        "dish code and category code can not be empty");
+    require(
+        bytes(mCodeToDish[_codeDish].code).length > 0,
+        "can not find dish"
+    );
 
-        Dish storage dish = mCodeToDish[_codeDish];
-        
-        if (bytes(_codeCat).length >0){ dish.nameCategory = _nameCategory; }
-        if (bytes(_name).length >0){ dish.name = _name;}
-        if (bytes(_des).length >0){ dish.des = _des;}
-        // dish.price = _price;
-        dish.available = _available;
-        dish.active = _active;
-        if (bytes(_imgUrl).length >0){ dish.imgUrl = _imgUrl;}
-        // dish.size = _size;
-        dish.cookingTime = _cookingTime;
-        dish.showIngredient = _showIngredient;
-        if (bytes(_videoLink).length >0){ dish.videoLink = _videoLink;}
-        _updateDishFromCat(_codeCat,_codeDish);
-        if (_variants.length >0){ 
-            bytes32[] storage variantHashes = mDishVariant[_codeDish];
-            for (uint256 i = 0; i < variantHashes.length; i++) {
-                delete mVariant[_codeDish][variantHashes[i]];
-                delete mVariantAttributes[_codeDish][variantHashes[i]];
+    Dish storage dish = mCodeToDish[_codeDish];
+
+    if (bytes(_codeCat).length > 0)    { dish.nameCategory = _nameCategory; }
+    if (bytes(_name).length > 0)       { dish.name = _name; }
+    if (bytes(_des).length > 0)        { dish.des = _des; }
+    dish.available = _available;
+    dish.active = _active;
+    if (bytes(_imgUrl).length > 0)     { dish.imgUrl = _imgUrl; }
+    dish.cookingTime = _cookingTime;
+    dish.showIngredient = _showIngredient;
+    if (bytes(_videoLink).length > 0)  { dish.videoLink = _videoLink; }
+
+    _updateDishFromCat(_codeCat, _codeDish);
+
+    if (_variants.length > 0) {
+        bytes32[] storage variantHashes = mDishVariant[_codeDish];
+        for (uint256 i = 0; i < variantHashes.length; i++) {
+            delete mVariant[_codeDish][variantHashes[i]];
+            delete mVariantAttributes[_codeDish][variantHashes[i]];
+        }
+        delete mDishVariant[_codeDish];
+
+        for (uint256 i = 0; i < _variants.length; i++) {
+            Variant memory newVariant;
+            bytes32 attributesHash = hashAttributes(_variants[i].attrs);
+            newVariant.variantID = attributesHash;
+            newVariant.dishPrice = _variants[i].price;
+            mDishVariant[_codeDish].push(attributesHash);
+            mVariant[_codeDish][attributesHash] = newVariant;
+            for (uint256 j = 0; j < _variants[i].attrs.length; j++) {
+                mVariantAttributes[_codeDish][attributesHash].push();
+                mVariantAttributes[_codeDish][attributesHash][j] = _variants[i].attrs[j];
             }
-            delete mDishVariant[_codeDish];
-            for (uint256 i = 0; i < _variants.length; i++) {
-                Variant memory newVariant;
-                bytes32 attributesHash = hashAttributes(_variants[i].attrs);
-                newVariant.variantID = attributesHash;
-                newVariant.dishPrice = _variants[i].price;
-                mDishVariant[_codeDish].push(attributesHash);
-                mVariant[_codeDish][attributesHash] = newVariant;
-
-                for (uint256 j = 0; j < _variants[i].attrs.length; j++) {
-                    mVariantAttributes[_codeDish][attributesHash].push();
-                    mVariantAttributes[_codeDish][attributesHash][j] = _variants[i]
-                        .attrs[j];
-                }
-
-                for (uint256 k = 0; k < i; k++) {
-                    require(
-                        mDishVariant[_codeDish][k] != attributesHash,"Duplicate variant attributes detected"
-                    );
-                }
+            for (uint256 k = 0; k < i; k++) {
+                require(
+                    mDishVariant[_codeDish][k] != attributesHash,
+                    "Duplicate variant attributes detected"
+                );
             }
         }
-        if (_ingredients.length > 0){
-            delete dish.ingredients;  // Clear old ingredients first
-            for (uint256 i = 0; i < _ingredients.length; i++) {
-                dish.ingredients.push(_ingredients[i]);
-            }        
-        }
-        if (dishesWithOrder.length > 0) {
-            uint256 stored = dishOrderIndex[_codeDish];
-            bool updated = false;
-
-            // trường hợp đúng chuẩn: stored > 0 và stored là index+1
-            if (stored > 0) {
-                uint256 idx = stored - 1;
-                if (idx < dishesWithOrder.length) {
-                    // kiểm tra chắc chắn cùng dish
-                    if (keccak256(abi.encodePacked(dishesWithOrder[idx].dish.code)) == keccak256(abi.encodePacked(_codeDish))) {
-                        dishesWithOrder[idx].dish = mCodeToDish[_codeDish];
-                        // cập nhật variant + attributes nếu có variant hiện thời (lấy variant[0])
-                        if (mDishVariant[_codeDish].length > 0) {
-                            bytes32 v0 = mDishVariant[_codeDish][0];
-                            dishesWithOrder[idx].variant = mVariant[_codeDish][v0];
-                            dishesWithOrder[idx].attributes = mVariantAttributes[_codeDish][v0];
-                        }
-                        updated = true;
-                    }
-                }
-            }
-        }
-        if (address(historyTracking) != address(0)) {
-            Variant[] memory variants = new Variant[](mDishVariant[_codeDish].length);
-            Attribute[][] memory attributes = new Attribute[][](mDishVariant[_codeDish].length);
-            
-            for (uint i = 0; i < mDishVariant[_codeDish].length; i++) {
-                bytes32 variantHash = mDishVariant[_codeDish][i];
-                variants[i] = mVariant[_codeDish][variantHash];
-                attributes[i] = mVariantAttributes[_codeDish][variantHash];
-            }
-            
-            historyTracking.recordDishUpdate(
-                _codeDish,
-                mCodeToDish[_codeDish],
-                variants,
-                attributes,
-                "Updated dish information"
-            );
-        }
-    
-        return true;
     }
-    function RemoveDish(
-        string memory _codeCategory,
-        string memory _dishCode
-    ) external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive {
-        require(bytes(_codeCategory).length > 0, "Invalid category code");
-        require(bytes(_dishCode).length > 0, "Invalid dish code");
-        require(isCodeExist[_dishCode], "Dish does not exist");
-        require(
-            bytes(mCodeToCat[_codeCategory].code).length > 0,
-            "Category code does not exist"
+
+    if (_ingredients.length > 0) {
+        delete dish.ingredients;
+        for (uint256 i = 0; i < _ingredients.length; i++) {
+            dish.ingredients.push(_ingredients[i]);
+        }
+    }
+
+    // ✅ FIX: sync dishesWithOrder dùng 0-based trực tiếp
+    if (dishesWithOrder.length > 0) {
+        uint256 idx = dishOrderIndex[_codeDish];
+        if (idx < dishesWithOrder.length &&
+            keccak256(abi.encodePacked(dishesWithOrder[idx].dish.code)) ==
+            keccak256(abi.encodePacked(_codeDish))) {
+
+            dishesWithOrder[idx].dish = mCodeToDish[_codeDish];
+            if (mDishVariant[_codeDish].length > 0) {
+                bytes32 v0 = mDishVariant[_codeDish][0];
+                dishesWithOrder[idx].variant = mVariant[_codeDish][v0];
+                dishesWithOrder[idx].attributes = mVariantAttributes[_codeDish][v0];
+            }
+        }
+    }
+
+    if (address(historyTracking) != address(0)) {
+        Variant[] memory variants = new Variant[](mDishVariant[_codeDish].length);
+        Attribute[][] memory attributes = new Attribute[][](mDishVariant[_codeDish].length);
+        for (uint i = 0; i < mDishVariant[_codeDish].length; i++) {
+            bytes32 variantHash = mDishVariant[_codeDish][i];
+            variants[i] = mVariant[_codeDish][variantHash];
+            attributes[i] = mVariantAttributes[_codeDish][variantHash];
+        }
+        historyTracking.recordDishUpdate(
+            _codeDish,
+            mCodeToDish[_codeDish],
+            variants,
+            attributes,
+            "Updated dish information"
         );
-        //Record BEFORE deleting (để lưu snapshot cuối cùng)
-        if (address(historyTracking) != address(0)) {
-            Variant[] memory variants = new Variant[](mDishVariant[_dishCode].length);
-            Attribute[][] memory attributes = new Attribute[][](mDishVariant[_dishCode].length);
-            
-            for (uint i = 0; i < mDishVariant[_dishCode].length; i++) {
-                bytes32 variantHash = mDishVariant[_dishCode][i];
-                variants[i] = mVariant[_dishCode][variantHash];
-                attributes[i] = mVariantAttributes[_dishCode][variantHash];
-            }
-            
-            historyTracking.recordDishDelete(
-                _dishCode,
-                mCodeToDish[_dishCode],
-                variants,
-                attributes,
-                "Dish removed from menu"
-            );
+    }
+
+    return true;
+}
+function RemoveDish(
+    string memory _codeCategory,
+    string memory _dishCode
+) external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive {
+    require(bytes(_codeCategory).length > 0, "Invalid category code");
+    require(bytes(_dishCode).length > 0, "Invalid dish code");
+    require(isCodeExist[_dishCode], "Dish does not exist");
+    require(
+        bytes(mCodeToCat[_codeCategory].code).length > 0,
+        "Category code does not exist"
+    );
+
+    if (address(historyTracking) != address(0)) {
+        Variant[] memory variants = new Variant[](mDishVariant[_dishCode].length);
+        Attribute[][] memory attributes = new Attribute[][](mDishVariant[_dishCode].length);
+        for (uint i = 0; i < mDishVariant[_dishCode].length; i++) {
+            bytes32 variantHash = mDishVariant[_dishCode][i];
+            variants[i] = mVariant[_dishCode][variantHash];
+            attributes[i] = mVariantAttributes[_dishCode][variantHash];
         }
+        historyTracking.recordDishDelete(
+            _dishCode,
+            mCodeToDish[_dishCode],
+            variants,
+            attributes,
+            "Dish removed from menu"
+        );
+    }
 
-        // Xoá dish khỏi danh sách trong category
-        Dish[] storage dishes = mCodeCatToDishes[_codeCategory];
-        for (uint256 i = 0; i < dishes.length; i++) {
-            if (
-                keccak256(abi.encodePacked(dishes[i].code)) ==
-                keccak256(abi.encodePacked(_dishCode))
-            ) {
-                dishes[i] = dishes[dishes.length - 1];
-                dishes.pop();
-                break;
-            }
+    // Xóa khỏi mCodeCatToDishes
+    Dish[] storage dishes = mCodeCatToDishes[_codeCategory];
+    for (uint256 i = 0; i < dishes.length; i++) {
+        if (keccak256(abi.encodePacked(dishes[i].code)) ==
+            keccak256(abi.encodePacked(_dishCode))) {
+            dishes[i] = dishes[dishes.length - 1];
+            dishes.pop();
+            break;
         }
+    }
 
-        // Xoá variants liên quan
-        bytes32[] storage variants = mDishVariant[_dishCode];
-        for (uint256 i = 0; i < variants.length; i++) {
-            bytes32 variantID = variants[i];
-            // xoá attributes của variant
-            delete mVariantAttributes[_dishCode][variantID];
-            // xoá variant struct
-            delete mVariant[_dishCode][variantID];
+    // Xóa variants
+    bytes32[] storage variants = mDishVariant[_dishCode];
+    for (uint256 i = 0; i < variants.length; i++) {
+        bytes32 variantID = variants[i];
+        delete mVariantAttributes[_dishCode][variantID];
+        delete mVariant[_dishCode][variantID];
+    }
+    delete mDishVariant[_dishCode];
+
+    // Xóa dish chính
+    delete mCodeToDish[_dishCode];
+    isCodeExist[_dishCode] = false;
+    delete dishStartTime[_dishCode];
+    delete dishIsNew[_dishCode];
+
+    // ✅ FIX: Xóa khỏi allDishCodes (0-based)
+    uint256 codeIdx = dishCodeIndex[_dishCode];
+    if (codeIdx < allDishCodes.length &&
+        keccak256(abi.encodePacked(allDishCodes[codeIdx])) ==
+        keccak256(abi.encodePacked(_dishCode))) {
+
+        uint256 lastCodeIdx = allDishCodes.length - 1;
+        if (codeIdx != lastCodeIdx) {
+            string memory lastCode = allDishCodes[lastCodeIdx];
+            allDishCodes[codeIdx] = lastCode;
+            dishCodeIndex[lastCode] = codeIdx; // ✅ 0-based
         }
-        delete mDishVariant[_dishCode];
-
-        // Xoá dish chính
-        delete mCodeToDish[_dishCode];
-        isCodeExist[_dishCode] = false;
-
-        // Xoá tracking
-        delete dishStartTime[_dishCode];
-        delete dishIsNew[_dishCode];
-
-        // Xoá khỏi allDishCodes  
-        uint256 indexPlusOne = dishCodeIndex[_dishCode];
-        
-        uint256 index = indexPlusOne - 1;
-        uint256 lastIndex = allDishCodes.length - 1;
-        
-        if (index != lastIndex) {
-            // Swap with last element
-            string memory lastCode = allDishCodes[lastIndex];
-            allDishCodes[index] = lastCode;
-            dishCodeIndex[lastCode] = indexPlusOne;
-        }
-        
         allDishCodes.pop();
         delete dishCodeIndex[_dishCode];
-        //xóa khỏi dishesWithOrder
-         uint256 orderIndexPlusOne = dishOrderIndex[_dishCode];
-        if (orderIndexPlusOne > 0) {
-            uint256 orderIndex = orderIndexPlusOne - 1;
-            uint256 orderLastIndex = dishesWithOrder.length - 1;
-            
-            if (orderIndex != orderLastIndex) {
-                DishWithOrder memory lastDishWithOrder = dishesWithOrder[orderLastIndex];
-                dishesWithOrder[orderIndex] = lastDishWithOrder;
-                dishOrderIndex[lastDishWithOrder.dish.code] = orderIndexPlusOne;
-            }
-            
-            dishesWithOrder.pop();
-            delete dishOrderIndex[_dishCode];
-        }
-        emit DishRemoved(_dishCode, _codeCategory);
     }
 
+    // ✅ FIX: Xóa khỏi dishesWithOrder (0-based)
+    uint256 orderIdx = dishOrderIndex[_dishCode];
+    if (orderIdx < dishesWithOrder.length &&
+        keccak256(abi.encodePacked(dishesWithOrder[orderIdx].dish.code)) ==
+        keccak256(abi.encodePacked(_dishCode))) {
+
+        uint256 lastOrderIdx = dishesWithOrder.length - 1;
+        if (orderIdx != lastOrderIdx) {
+            DishWithOrder memory lastItem = dishesWithOrder[lastOrderIdx];
+            dishesWithOrder[orderIdx] = lastItem;
+            dishOrderIndex[lastItem.dish.code] = orderIdx; // ✅ gán index mới 0-based
+        }
+        dishesWithOrder.pop();
+        delete dishOrderIndex[_dishCode];
+    }
+
+    emit DishRemoved(_dishCode, _codeCategory);
+}
     event DishRemoved(string dishCode, string categoryCode);
 
     function updateAverageStarDish(uint8 _newStar, string memory _codeDish) external onlyOrder {
@@ -4024,47 +4094,43 @@ function SortDishesWithOrderRange(uint256 from, uint256 topN) public {
     }
 
     // Cập nhật giá sản phẩm
-    function UpdateProductPrice(
-        string memory _dishCode, 
-        bytes32 _variantID, 
-        uint256 _newPrice
-    ) external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive {
-        
-        require(isCodeExist[_dishCode], "Dish code does not exist");
-        Variant storage targetVar = mVariant[_dishCode][_variantID];
-        require(targetVar.variantID != bytes32(0), "Variant not found");
+function UpdateProductPrice(
+    string memory _dishCode,
+    bytes32 _variantID,
+    uint256 _newPrice
+) external onlyAdminAndRole(STAFF_ROLE.MENU_MANAGE) isActive {
+    require(isCodeExist[_dishCode], "Dish code does not exist");
 
-        uint256 oldPrice = targetVar.dishPrice;
-        targetVar.dishPrice = _newPrice;
+    Variant storage targetVar = mVariant[_dishCode][_variantID];
+    require(targetVar.variantID != bytes32(0), "Variant not found");
 
-        // Cập nhật snapshot hiển thị
-        uint256 indexDish = dishOrderIndex[_dishCode];
-        if (indexDish > 0) {
-            uint256 idx = indexDish - 1;
-            if (dishesWithOrder[idx].variant.variantID == _variantID) {
-                dishesWithOrder[idx].variant.dishPrice = _newPrice;
-            }
-        }
+    targetVar.dishPrice = _newPrice;
 
-       // Ghi log lịch sử thay đổi 
-        if (address(historyTracking) != address(0)) {
-            Variant[] memory updatedVariantLog = new Variant[](1);
-            updatedVariantLog[0] = mVariant[_dishCode][_variantID];
+    // ✅ FIX: 0-based trực tiếp
+    uint256 idx = dishOrderIndex[_dishCode];
+    if (idx < dishesWithOrder.length &&
+        keccak256(abi.encodePacked(dishesWithOrder[idx].dish.code)) ==
+        keccak256(abi.encodePacked(_dishCode)) &&
+        dishesWithOrder[idx].variant.variantID == _variantID) {
 
-            string memory detailLog = "Update Price";
-
-            historyTracking.recordDishUpdate(
-                _dishCode, 
-                mCodeToDish[_dishCode], 
-                updatedVariantLog, 
-                new Attribute[][](0), 
-                detailLog
-            );
-        }
-
-        emit ProductPriceUpdated( msg.sender, _dishCode, _variantID, _newPrice, block.timestamp);
+        dishesWithOrder[idx].variant.dishPrice = _newPrice;
     }
 
+    if (address(historyTracking) != address(0)) {
+        Variant[] memory updatedVariantLog = new Variant[](1);
+        updatedVariantLog[0] = mVariant[_dishCode][_variantID];
+
+        historyTracking.recordDishUpdate(
+            _dishCode,
+            mCodeToDish[_dishCode],
+            updatedVariantLog,
+            new Attribute[][](0),
+            "Update Price"
+        );
+    }
+
+    emit ProductPriceUpdated(msg.sender, _dishCode, _variantID, _newPrice, block.timestamp);
+}
 
     
 //    function UploadCustomerInfo(
